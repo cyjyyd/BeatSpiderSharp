@@ -12,7 +12,7 @@ public static class Program
         {
             try
             {
-                code = await new BeatSpiderCLI().Run(options);
+                code = await new BeatSpiderCLI(options.Verbose).Run(options);
             }
             catch (Exception e)
             {

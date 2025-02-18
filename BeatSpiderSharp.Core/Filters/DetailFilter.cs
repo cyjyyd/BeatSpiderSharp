@@ -284,6 +284,6 @@ public class DetailFilter: ISongFilter
     
     private void LogExclusion(BeatSpiderSong song, string reason)
     {
-        if (LogExclusions) Log.Debug("Song {Bsr} excluded: {Reason}", song.Bsr, reason);
+        Log.Verbose("Song {Bsr} excluded: {Reason}", song.Bsr, reason);
     }
 }

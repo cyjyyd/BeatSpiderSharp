@@ -18,10 +18,11 @@ public abstract class BeatSpider
 
     protected SongDetails SongDetails { get; private set; } = null!;
 
-    protected bool Verbose { get; set; }
+    protected bool Verbose { get; }
 
-    protected BeatSpider()
+    protected BeatSpider(bool verbose)
     {
+        Verbose = verbose;
         SetupLogging();
         SongDetails.SetCacheDirectory(SpecialFolders.DataFolder);
     }
@@ -94,7 +95,7 @@ public abstract class BeatSpider
         {
             songs = songs.Select(song =>
             {
-                Log.Information("Song {Bsr} ({Title} - {Mapper}) included", song.Bsr, song.SongDetails.songName, song.SongDetails.uploaderName);
+                Log.Verbose("Song {Bsr} ({Title} - {Mapper}) included", song.Bsr, song.SongDetails.songName, song.SongDetails.uploaderName);
                 return song;
             });
         }

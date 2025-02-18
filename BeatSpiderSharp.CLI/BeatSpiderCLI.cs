@@ -7,17 +7,26 @@ using Serilog;
 
 namespace BeatSpiderSharp.CLI;
 
-public class BeatSpiderCLI : BeatSpider
+public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
 {
     protected override void ConfigureLogger(LoggerConfiguration configuration)
     {
         base.ConfigureLogger(configuration);
-        configuration
+
+        if (Verbose)
+        {
+            configuration.MinimumLevel.Verbose();
+        }
 #if DEBUG
-            .MinimumLevel.Debug()
+        else
+        {
+            configuration.MinimumLevel.Debug();
+        }
 #endif
+        configuration
             // .WriteTo.File("BeatSpiderCLI.log", rollingInterval: RollingInterval.Day)
             .WriteTo.Console();
+        
     }
 
     public async Task<int> Run(Options options)
@@ -27,8 +36,6 @@ public class BeatSpiderCLI : BeatSpider
 #if DEBUG
         Log.Debug("Options: {@Options}", options);
 #endif
-
-        Verbose = options.Verbose;
 
         await InitAsync();
 
