@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using System.IO.Compression;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace BeatSpiderSharp.Cacher;
@@ -25,16 +26,18 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    public async Task CrawlAllMapsAsync(string outputPath)
+    public async Task CrawlAllMapsAsync(string outputPath, bool gzip, bool indented = false)
     {
         var totalPages = await GetTotalPagesAsync();
         var options = new ParallelOptions { MaxDegreeOfParallelism = 2 };
         var writerLock = new object();
 
-        await using var outputStream = new FileStream(outputPath, FileMode.Create);
+        await using Stream outputStream = gzip
+            ? new GZipStream(new FileStream(outputPath, FileMode.Create), CompressionLevel.SmallestSize, false)
+            : new FileStream(outputPath, FileMode.Create);
         await using var textWriter = new StreamWriter(outputStream);
         await using var writer = new JsonTextWriter(textWriter);
-        writer.Formatting = Formatting.Indented;
+        writer.Formatting = indented ? Formatting.Indented : Formatting.None;
 
         await writer.WriteStartObjectAsync();
         await writer.WritePropertyNameAsync("docs");

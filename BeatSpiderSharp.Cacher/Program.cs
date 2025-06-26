@@ -16,5 +16,5 @@ var progress = new Progress<ProgressReport>(report =>
 });
 
 using var crawler = new BeatSaverCrawler(progress);
-await crawler.CrawlAllMapsAsync("localcache.saver");
-Console.WriteLine("完整本地缓存已保存到 localcache.saver");
+await crawler.CrawlAllMapsAsync("localcache.saver.gz", true);
+Console.WriteLine("完整本地缓存已保存到 localcache.saver.gz");
