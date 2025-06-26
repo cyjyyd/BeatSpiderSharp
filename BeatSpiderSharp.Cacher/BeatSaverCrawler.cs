@@ -4,22 +4,26 @@ using System.Text.Json;
 
 namespace BeatSpiderSharp.Cacher;
 
-public class BeatSaverCrawler : IDisposable
+public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
 {
     private const string ApiUrl = "https://api.beatsaver.com/search/text/";
     private const int PageSize = 100;
-    private readonly HttpClient _client;
-    private readonly IProgress<ProgressReport> _progress;
-    private readonly ConcurrentBag<string> _tempFiles = new();
 
-    public BeatSaverCrawler(IProgress<ProgressReport> progress)
+    private readonly HttpClient _client = new(new SocketsHttpHandler
     {
-        _progress = progress;
-        _client = new HttpClient(new SocketsHttpHandler
-        {
-            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
-            MaxConnectionsPerServer = 5
-        });
+        PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+        MaxConnectionsPerServer = 5
+    });
+
+    ~BeatSaverCrawler()
+    {
+        _client.Dispose();
+    }
+
+    void IDisposable.Dispose()
+    {
+        _client.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     public async Task CrawlAllMapsAsync(string outputPath)
@@ -27,33 +31,33 @@ public class BeatSaverCrawler : IDisposable
         var totalPages = await GetTotalPagesAsync();
         var options = new ParallelOptions { MaxDegreeOfParallelism = 2 };
         var writerLock = new object();
-        using (var outputStream = new FileStream("localcache.saver", FileMode.Create))
-        using (var writer = new Utf8JsonWriter(outputStream, new JsonWriterOptions
+
+        await using var outputStream = new FileStream("localcache.saver", FileMode.Create);
+
+        await using var writer = new Utf8JsonWriter(outputStream, new JsonWriterOptions
         {
             Indented = false
-        }))
+        });
+        writer.WriteStartObject();
+        writer.WritePropertyName("docs");
+        writer.WriteStartArray();
+        await Parallel.ForEachAsync(Enumerable.Range(0, totalPages), options, async (page, ct) =>
         {
-            writer.WriteStartObject();
-            writer.WritePropertyName("docs");
-            writer.WriteStartArray();
-            await Parallel.ForEachAsync(Enumerable.Range(0, totalPages), options, async (page, ct) =>
+            await using var inputStream = await ProcessPageAsync(page, totalPages);
+            var doc = JsonDocument.Parse(inputStream);
+            if (doc.RootElement.TryGetProperty("docs", out var docsArray))
             {
-                using var inputStream = await ProcessPageAsync(page, totalPages);
-                var doc = JsonDocument.Parse(inputStream);
-                if (doc.RootElement.TryGetProperty("docs", out var docsArray))
+                lock (writerLock)
                 {
-                    lock (writerLock)
+                    foreach (var item in docsArray.EnumerateArray())
                     {
-                        foreach (var item in docsArray.EnumerateArray())
-                        {
-                            item.WriteTo(writer);
-                        }
+                        item.WriteTo(writer);
                     }
                 }
-            });
-            writer.WriteEndArray();
-            writer.WriteEndObject();
-        }
+            }
+        });
+        writer.WriteEndArray();
+        writer.WriteEndObject();
     }
 
     private async Task<int> GetTotalPagesAsync()
@@ -68,7 +72,7 @@ public class BeatSaverCrawler : IDisposable
         try
         {
             var response = await _client.GetStringAsync($"{ApiUrl}{page}?pageSize={PageSize}");
-            _progress?.Report(new ProgressReport
+            progress?.Report(new ProgressReport
             {
                 CurrentPage = page + 1,
                 TotalPages = totalPages
@@ -78,10 +82,8 @@ public class BeatSaverCrawler : IDisposable
         }
         catch (Exception ex)
         {
-            _progress?.Report(new ProgressReport { Error = ex });
+            progress?.Report(new ProgressReport { Error = ex });
             return Stream.Null;
         }
     }
-
-    public void Dispose() => _client.Dispose();
 }
