@@ -1,4 +1,6 @@
-﻿using System.IO.Compression;
+﻿using System.Diagnostics;
+using System.IO.Compression;
+using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -44,28 +46,67 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
         await writer.WriteStartArrayAsync();
         await Parallel.ForEachAsync(Enumerable.Range(0, totalPages), options, async (page, ct) =>
         {
-            await using var inputStream = await ProcessPageAsync(page, totalPages);
-            using var streamReader = new StreamReader(inputStream);
-            await using var jsonReader = new JsonTextReader(streamReader);
-            var doc = await JObject.LoadAsync(jsonReader, ct);
-            var docs = doc["docs"];
-            if (docs is null || !docs.HasValues)
+            var stopwatch = Stopwatch.StartNew();
+            try
             {
-                return; // Skip empty pages
-            }
+                await using var resStream = await _client.GetStreamAsync($"{ApiUrl}{page}?pageSize={PageSize}", ct);
+                using var streamReader = new StreamReader(resStream, Encoding.UTF8);
+                await using var jsonReader = new JsonTextReader(streamReader);
 
-            if (docs.Type != JTokenType.Array)
-            {
-                progress?.Report(new ProgressReport { Error = new Exception("'docs' is not an array.") });
-                return;
-            }
+                var res = await JObject.LoadAsync(jsonReader, ct);
+                var docs = res["docs"];
 
-            lock (writerLock)
-            {
-                foreach (var item in docs)
+                if (docs is null || !docs.HasValues)
                 {
-                    item.WriteTo(writer);
+                    return; // Skip empty pages
                 }
+
+                if (docs.Type != JTokenType.Array)
+                {
+                    progress?.Report(new ProgressReport { Error = new Exception("'docs' is not an array.") });
+                    return;
+                }
+
+                lock (writerLock)
+                {
+                    foreach (var item in docs)
+                    {
+                        item.WriteTo(writer);
+                    }
+                }
+
+                progress?.Report(new ProgressReport
+                {
+                    CurrentPage = page + 1,
+                    TotalPages = totalPages
+                });
+            }
+            catch (Exception ex)
+            {
+                progress?.Report(new ProgressReport
+                {
+                    CurrentPage = page + 1,
+                    TotalPages = totalPages,
+                    Error = ex
+                });
+            }
+            finally
+            {
+                stopwatch.Stop();
+                // var elapsedTime = stopwatch.Elapsed.TotalMilliseconds;
+                //
+                // // BeatSaver has a rate limit of 10 requests per second. (LIES!!! MORE LIKE 4!)
+                // var delay = 250 - elapsedTime;
+                //
+                // if (delay > 0)
+                // {
+                //     Console.WriteLine($"{elapsedTime}ms, delaying {delay}ms");
+                //     await Task.Delay((int)delay, ct);
+                // }
+                // else
+                // {
+                //     Console.WriteLine($"{elapsedTime}ms");
+                // }
             }
         });
         await writer.WriteEndArrayAsync();
@@ -77,30 +118,5 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
         var response = await _client.GetStringAsync($"{ApiUrl}0?pageSize={PageSize}");
         var doc = JObject.Parse(response);
         return (int)Math.Ceiling(doc["info"]!["total"]!.ToObject<double>() / PageSize);
-    }
-
-    private async Task<Stream> ProcessPageAsync(int page, int totalPages)
-    {
-        try
-        {
-            var response = await _client.GetStringAsync($"{ApiUrl}{page}?pageSize={PageSize}");
-            progress?.Report(new ProgressReport
-            {
-                CurrentPage = page + 1,
-                TotalPages = totalPages
-            });
-            var memoryStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(response));
-            return memoryStream;
-        }
-        catch (Exception ex)
-        {
-            progress?.Report(new ProgressReport
-            {
-                CurrentPage = page + 1,
-                TotalPages = totalPages,
-                Error = ex
-            });
-            return Stream.Null;
-        }
     }
 }
