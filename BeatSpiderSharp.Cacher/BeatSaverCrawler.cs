@@ -110,6 +110,8 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
             }
         });
         await writer.WriteEndArrayAsync();
+        await writer.WritePropertyNameAsync("date");
+        await writer.WriteValueAsync(DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         await writer.WriteEndObjectAsync();
     }
 
