@@ -32,7 +32,7 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
         var options = new ParallelOptions { MaxDegreeOfParallelism = 2 };
         var writerLock = new object();
 
-        await using var outputStream = new FileStream("localcache.saver", FileMode.Create);
+        await using var outputStream = new FileStream(outputPath, FileMode.Create);
 
         await using var writer = new Utf8JsonWriter(outputStream, new JsonWriterOptions
         {
