@@ -1,6 +1,5 @@
 ﻿using Newtonsoft.Json;
-using System.Collections.Concurrent;
-using System.Text.Json;
+using Newtonsoft.Json.Linq;
 
 namespace BeatSpiderSharp.Cacher;
 
@@ -33,38 +32,48 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
         var writerLock = new object();
 
         await using var outputStream = new FileStream(outputPath, FileMode.Create);
+        await using var textWriter = new StreamWriter(outputStream);
+        await using var writer = new JsonTextWriter(textWriter);
+        writer.Formatting = Formatting.Indented;
 
-        await using var writer = new Utf8JsonWriter(outputStream, new JsonWriterOptions
-        {
-            Indented = false
-        });
-        writer.WriteStartObject();
-        writer.WritePropertyName("docs");
-        writer.WriteStartArray();
+        await writer.WriteStartObjectAsync();
+        await writer.WritePropertyNameAsync("docs");
+        await writer.WriteStartArrayAsync();
         await Parallel.ForEachAsync(Enumerable.Range(0, totalPages), options, async (page, ct) =>
         {
             await using var inputStream = await ProcessPageAsync(page, totalPages);
-            var doc = JsonDocument.Parse(inputStream);
-            if (doc.RootElement.TryGetProperty("docs", out var docsArray))
+            using var streamReader = new StreamReader(inputStream);
+            await using var jsonReader = new JsonTextReader(streamReader);
+            var doc = await JObject.LoadAsync(jsonReader, ct);
+            var docs = doc["docs"];
+            if (docs is null || !docs.HasValues)
             {
-                lock (writerLock)
+                return; // Skip empty pages
+            }
+
+            if (docs.Type != JTokenType.Array)
+            {
+                progress?.Report(new ProgressReport { Error = new Exception("'docs' is not an array.") });
+                return;
+            }
+
+            lock (writerLock)
+            {
+                foreach (var item in docs)
                 {
-                    foreach (var item in docsArray.EnumerateArray())
-                    {
-                        item.WriteTo(writer);
-                    }
+                    item.WriteTo(writer);
                 }
             }
         });
-        writer.WriteEndArray();
-        writer.WriteEndObject();
+        await writer.WriteEndArrayAsync();
+        await writer.WriteEndObjectAsync();
     }
 
     private async Task<int> GetTotalPagesAsync()
     {
         var response = await _client.GetStringAsync($"{ApiUrl}0?pageSize={PageSize}");
-        var doc = JsonDocument.Parse(response);
-        return (int)Math.Ceiling(doc.RootElement.GetProperty("info").GetProperty("total").GetInt32() / (double)PageSize);
+        var doc = JObject.Parse(response);
+        return (int)Math.Ceiling(doc["info"]!["total"]!.ToObject<double>() / PageSize);
     }
 
     private async Task<Stream> ProcessPageAsync(int page, int totalPages)
@@ -82,7 +91,12 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
         }
         catch (Exception ex)
         {
-            progress?.Report(new ProgressReport { Error = ex });
+            progress?.Report(new ProgressReport
+            {
+                CurrentPage = page + 1,
+                TotalPages = totalPages,
+                Error = ex
+            });
             return Stream.Null;
         }
     }
