@@ -17,6 +17,15 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
         MaxConnectionsPerServer = 5
     });
 
+    public bool UseGZip { get; init; }
+
+    public int MaxDegreeOfParallelism { get; init; } = 1;
+
+    public bool IndentedOutput { get; init; }
+
+    public int MinRequestTime { get; init; }
+
+
     ~BeatSaverCrawler()
     {
         _client.Dispose();
@@ -28,18 +37,23 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    public async Task CrawlAllMapsAsync(string outputPath, bool gzip, bool indented = false)
+    public async Task CrawlAllMapsAsync(string outputPath)
     {
+        if (MaxDegreeOfParallelism <= 0)
+        {
+            throw new Exception("并发数必须大于0");
+        }
+
         var totalPages = await GetTotalPagesAsync();
-        var options = new ParallelOptions { MaxDegreeOfParallelism = 2 };
+        var options = new ParallelOptions { MaxDegreeOfParallelism = 1 };
         var writerLock = new object();
 
-        await using Stream outputStream = gzip
+        await using Stream outputStream = UseGZip
             ? new GZipStream(new FileStream(outputPath, FileMode.Create), CompressionLevel.SmallestSize, false)
             : new FileStream(outputPath, FileMode.Create);
         await using var textWriter = new StreamWriter(outputStream);
         await using var writer = new JsonTextWriter(textWriter);
-        writer.Formatting = indented ? Formatting.Indented : Formatting.None;
+        writer.Formatting = IndentedOutput ? Formatting.Indented : Formatting.None;
 
         await writer.WriteStartObjectAsync();
         await writer.WritePropertyNameAsync("docs");
@@ -93,20 +107,18 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
             finally
             {
                 stopwatch.Stop();
-                // var elapsedTime = stopwatch.Elapsed.TotalMilliseconds;
-                //
-                // // BeatSaver has a rate limit of 10 requests per second. (LIES!!! MORE LIKE 4!)
-                // var delay = 250 - elapsedTime;
-                //
-                // if (delay > 0)
-                // {
-                //     Console.WriteLine($"{elapsedTime}ms, delaying {delay}ms");
-                //     await Task.Delay((int)delay, ct);
-                // }
-                // else
-                // {
-                //     Console.WriteLine($"{elapsedTime}ms");
-                // }
+                var elapsedTime = stopwatch.Elapsed.TotalMilliseconds;
+
+                if (MinRequestTime > 0 && elapsedTime < MinRequestTime)
+                {
+                    var delay = (int)(MinRequestTime - elapsedTime);
+                    Console.WriteLine($"{elapsedTime}ms, delaying {delay}ms");
+                    await Task.Delay(delay, ct);
+                }
+                else
+                {
+                    Console.WriteLine($"{elapsedTime}ms");
+                }
             }
         });
         await writer.WriteEndArrayAsync();
