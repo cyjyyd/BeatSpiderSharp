@@ -55,6 +55,13 @@ var nThreads = new Option<int>("-t", "--threads")
     Description = "并发数，默认为1",
     DefaultValueFactory = _ => 1
 };
+nThreads.Validators.Add(result =>
+{
+    if (result.GetValue(nThreads) <= 0)
+    {
+        result.AddError("并发数必须大于或等于1");
+    }
+});
 
 var useGzip = new Option<bool>("-z", "--gzip")
 {
@@ -69,6 +76,13 @@ var rateLimit = new Option<int>("-r", "--rate-limit")
     Description = "每次请求的最短时间，单位为毫秒，默认为0（不限速）",
     DefaultValueFactory = _ => 0
 };
+rateLimit.Validators.Add(result =>
+{
+    if (result.GetValue(rateLimit) < 0)
+    {
+        result.AddError("每次请求的最短时间必须不能小于0");
+    }
+});
 
 var exitOnError = new Option<bool>("-e", "--exit-on-error")
 {

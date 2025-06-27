@@ -47,6 +47,11 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
             throw new InvalidOperationException("并发数必须大于0");
         }
 
+        if (MinRequestTime < 0)
+        {
+            throw new InvalidOperationException("最小请求时间不能小于0");
+        }
+
         var totalPages = await GetTotalPagesAsync();
         var options = new ParallelOptions { MaxDegreeOfParallelism = ConcurrentRequests, CancellationToken = cToken };
         var writerLock = new object();
