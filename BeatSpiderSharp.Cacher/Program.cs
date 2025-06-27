@@ -70,10 +70,24 @@ var rateLimit = new Option<int>("-r", "--rate-limit")
     DefaultValueFactory = _ => 0
 };
 
+var exitOnError = new Option<bool>("-e", "--exit-on-error")
+{
+    Required = false,
+    Description = "发生错误时是否停止操作，默认为否",
+    DefaultValueFactory = _ => false
+};
+
 var indentedOutput = new Option<bool>("--indented")
 {
     Required = false,
     Description = "是否对输出的 JSON 文件进行格式化，默认为否",
+    DefaultValueFactory = _ => false
+};
+
+var verbose = new Option<bool>("-v", "--verbose")
+{
+    Required = false,
+    Description = "是否启用详细输出，默认为否",
     DefaultValueFactory = _ => false
 };
 
@@ -83,7 +97,9 @@ var rootCommand = new RootCommand("BeatSpider Cacher")
     nThreads,
     useGzip,
     rateLimit,
-    indentedOutput
+    exitOnError,
+    indentedOutput,
+    verbose
 };
 
 rootCommand.TreatUnmatchedTokensAsErrors = true;
@@ -101,7 +117,7 @@ rootCommand.SetAction(async (result, cToken) =>
         }
         else
         {
-            Console.WriteLine($"已获取 {report.CurrentPage}/{report.TotalPages} 页 ({Math.Round((double)report.CurrentPage / report.TotalPages * 100, 2)}%)");
+            Console.WriteLine($"已获取 {report.CurrentPage}/{report.TotalPages} 页 ({report.CurrentPage / (double) report.TotalPages:P2})");
         }
     });
 
@@ -110,7 +126,9 @@ rootCommand.SetAction(async (result, cToken) =>
         UseGZip = result.GetRequiredValue(useGzip),
         ConcurrentRequests = result.GetRequiredValue(nThreads),
         MinRequestTime = result.GetRequiredValue(rateLimit),
-        IndentedOutput = result.GetRequiredValue(indentedOutput)
+        IndentedOutput = result.GetRequiredValue(indentedOutput),
+        Verbose = result.GetRequiredValue(verbose),
+        ExitOnError = result.GetRequiredValue(exitOnError)
     };
 
     var output = result.GetRequiredValue(outputPath);
@@ -121,8 +139,7 @@ rootCommand.SetAction(async (result, cToken) =>
 
 return await CommandLineParser.Parse(rootCommand, args, new CommandLineConfiguration(rootCommand)
 {
-    EnablePosixBundling = false,
-    EnableDefaultExceptionHandler = false
+    EnablePosixBundling = false
 }).InvokeAsync(cTokenSource.Token);
 
 

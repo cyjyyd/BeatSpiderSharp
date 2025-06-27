@@ -25,6 +25,9 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
 
     public int MinRequestTime { get; init; }
 
+    public bool Verbose { get; init; }
+
+    public bool ExitOnError { get; init; }
 
     ~BeatSaverCrawler()
     {
@@ -41,7 +44,7 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
     {
         if (ConcurrentRequests <= 0)
         {
-            throw new Exception("并发数必须大于0");
+            throw new InvalidOperationException("并发数必须大于0");
         }
 
         var totalPages = await GetTotalPagesAsync();
@@ -72,12 +75,17 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
 
                 if (docs is null || !docs.HasValues)
                 {
+                    var ex = new Exception($"第 {page + 1} 页没有数据");
+                    progress?.Report(new ProgressReport { Error = ex });
+                    if (ExitOnError) throw ex;
                     return; // Skip empty pages
                 }
 
                 if (docs.Type != JTokenType.Array)
                 {
-                    progress?.Report(new ProgressReport { Error = new Exception("'docs' is not an array.") });
+                    var ex = new Exception($"第 {page + 1} 页数据错误， 'docs' 不是一个数组");
+                    progress?.Report(new ProgressReport { Error = ex });
+                    if (ExitOnError) throw ex;
                     return;
                 }
 
@@ -97,6 +105,7 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
             }
             catch (OperationCanceledException)
             {
+                if (Verbose) Console.WriteLine("操作被取消");
                 throw;
             }
             catch (Exception ex)
@@ -107,21 +116,26 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
                     TotalPages = totalPages,
                     Error = ex
                 });
+                if (ExitOnError) throw;
             }
             finally
             {
                 stopwatch.Stop();
-                var elapsedTime = stopwatch.Elapsed.TotalMilliseconds;
 
-                if (MinRequestTime > 0 && elapsedTime < MinRequestTime)
+                if (!ct.IsCancellationRequested)
                 {
-                    var delay = (int)(MinRequestTime - elapsedTime);
-                    Console.WriteLine($"{elapsedTime}ms, delaying {delay}ms");
-                    await Task.Delay(delay, ct);
-                }
-                else
-                {
-                    Console.WriteLine($"{elapsedTime}ms");
+                    var elapsedTime = (int)stopwatch.Elapsed.TotalMilliseconds;
+
+                    if (MinRequestTime > 0 && elapsedTime < MinRequestTime)
+                    {
+                        var delay = MinRequestTime - elapsedTime;
+                        if (Verbose) Console.WriteLine($"第 {page + 1} 页耗时 {elapsedTime}ms, 添加额外延迟 {delay}ms");
+                        await Task.Delay(delay, ct);
+                    }
+                    else
+                    {
+                        if (Verbose) Console.WriteLine($"第 {page + 1} 页耗时 {elapsedTime}ms");
+                    }
                 }
             }
         });
