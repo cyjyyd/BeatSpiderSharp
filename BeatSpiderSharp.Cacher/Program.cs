@@ -66,7 +66,7 @@ rootCommand.SetAction(async result =>
     using var crawler = new BeatSaverCrawler(progress)
     {
         UseGZip = result.GetRequiredValue(useGzip),
-        MaxDegreeOfParallelism = result.GetRequiredValue(nThreads),
+        ConcurrentRequests = result.GetRequiredValue(nThreads),
         MinRequestTime = result.GetRequiredValue(rateLimit),
         IndentedOutput = result.GetRequiredValue(indentedOutput)
     };

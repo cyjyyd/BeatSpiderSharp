@@ -19,7 +19,7 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
 
     public bool UseGZip { get; init; }
 
-    public int MaxDegreeOfParallelism { get; init; } = 1;
+    public int ConcurrentRequests { get; init; } = 1;
 
     public bool IndentedOutput { get; init; }
 
@@ -39,13 +39,13 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
 
     public async Task CrawlAllMapsAsync(string outputPath)
     {
-        if (MaxDegreeOfParallelism <= 0)
+        if (ConcurrentRequests <= 0)
         {
             throw new Exception("并发数必须大于0");
         }
 
         var totalPages = await GetTotalPagesAsync();
-        var options = new ParallelOptions { MaxDegreeOfParallelism = 1 };
+        var options = new ParallelOptions { MaxDegreeOfParallelism = ConcurrentRequests };
         var writerLock = new object();
 
         await using Stream outputStream = UseGZip
