@@ -1,5 +1,47 @@
-﻿using System.CommandLine;using System.CommandLine.Invocation;using System.CommandLine.Parsing;
+﻿using System.CommandLine;
+using System.CommandLine.Parsing;
 using BeatSpiderSharp.Cacher;
+
+var defaultColor = Console.ForegroundColor;
+var cTokenSource = new CancellationTokenSource();
+Console.CancelKeyPress += (o, e) =>
+{
+    Console.ForegroundColor = ConsoleColor.Yellow;
+    Console.WriteLine("取消操作...");
+    Console.ForegroundColor = defaultColor;
+    e.Cancel = true; // Prevent the process from terminating immediately
+    cTokenSource.Cancel();
+};
+
+AppDomain.CurrentDomain.UnhandledException += (o, e) =>
+{
+    if (e.ExceptionObject is OperationCanceledException)
+    {
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine("操作已取消。");
+    }
+    else
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.Write("未处理的异常: ");
+        if (e.ExceptionObject is Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+        else
+        {
+            Console.WriteLine(e.ExceptionObject);
+        }
+    }
+
+    Console.ForegroundColor = e.IsTerminating ? defaultColor : ConsoleColor.Green;
+};
+
+AppDomain.CurrentDomain.ProcessExit += (o, e) =>
+{
+    // Restore console color
+    Console.ForegroundColor = defaultColor;
+};
 
 var outputPath = new Option<string>("-o", "--output")
 {
@@ -46,7 +88,7 @@ var rootCommand = new RootCommand("BeatSpider Cacher")
 
 rootCommand.TreatUnmatchedTokensAsErrors = true;
 
-rootCommand.SetAction(async result =>
+rootCommand.SetAction(async (result, cToken) =>
 {
     Console.ForegroundColor = ConsoleColor.Green;
     var progress = new Progress<ProgressReport>(report =>
@@ -72,15 +114,16 @@ rootCommand.SetAction(async result =>
     };
 
     var output = result.GetRequiredValue(outputPath);
-    await crawler.CrawlAllMapsAsync(output);
+    await crawler.CrawlAllMapsAsync(output, cToken);
     Console.WriteLine($"完整本地缓存已保存到 {output}");
 });
 
 
-return CommandLineParser.Parse(rootCommand, args, new CommandLineConfiguration(rootCommand)
+return await CommandLineParser.Parse(rootCommand, args, new CommandLineConfiguration(rootCommand)
 {
-    EnablePosixBundling = false
-}).Invoke();
+    EnablePosixBundling = false,
+    EnableDefaultExceptionHandler = false
+}).InvokeAsync(cTokenSource.Token);
 
 
 

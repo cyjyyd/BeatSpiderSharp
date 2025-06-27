@@ -37,7 +37,7 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    public async Task CrawlAllMapsAsync(string outputPath)
+    public async Task CrawlAllMapsAsync(string outputPath, CancellationToken cToken)
     {
         if (ConcurrentRequests <= 0)
         {
@@ -45,7 +45,7 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
         }
 
         var totalPages = await GetTotalPagesAsync();
-        var options = new ParallelOptions { MaxDegreeOfParallelism = ConcurrentRequests };
+        var options = new ParallelOptions { MaxDegreeOfParallelism = ConcurrentRequests, CancellationToken = cToken };
         var writerLock = new object();
 
         await using Stream outputStream = UseGZip
@@ -55,9 +55,9 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
         await using var writer = new JsonTextWriter(textWriter);
         writer.Formatting = IndentedOutput ? Formatting.Indented : Formatting.None;
 
-        await writer.WriteStartObjectAsync();
-        await writer.WritePropertyNameAsync("docs");
-        await writer.WriteStartArrayAsync();
+        await writer.WriteStartObjectAsync(cToken);
+        await writer.WritePropertyNameAsync("docs", cToken);
+        await writer.WriteStartArrayAsync(cToken);
         await Parallel.ForEachAsync(Enumerable.Range(0, totalPages), options, async (page, ct) =>
         {
             var stopwatch = Stopwatch.StartNew();
@@ -95,6 +95,10 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
                     TotalPages = totalPages
                 });
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 progress?.Report(new ProgressReport
@@ -121,10 +125,10 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
                 }
             }
         });
-        await writer.WriteEndArrayAsync();
-        await writer.WritePropertyNameAsync("date");
-        await writer.WriteValueAsync(DateTimeOffset.UtcNow.ToUnixTimeSeconds());
-        await writer.WriteEndObjectAsync();
+        await writer.WriteEndArrayAsync(cToken);
+        await writer.WritePropertyNameAsync("date", cToken);
+        await writer.WriteValueAsync(DateTimeOffset.UtcNow.ToUnixTimeSeconds(), cToken);
+        await writer.WriteEndObjectAsync(cToken);
     }
 
     private async Task<int> GetTotalPagesAsync()
