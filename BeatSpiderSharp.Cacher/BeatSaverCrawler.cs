@@ -37,6 +37,47 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
 
     public async Task CrawlAllMapsAsync(string outputPath, CancellationToken cToken)
     {
+        if (string.IsNullOrWhiteSpace(outputPath))
+        {
+            throw new ArgumentException("输出路径不能为空", nameof(outputPath));
+        }
+
+        if (File.Exists(outputPath) && Verbose)
+        {
+            Console.WriteLine("将覆盖已存在输出文件");
+        }
+
+        var fileStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write, FileShare.None);
+        await CrawlAllMapsAsync(fileStream, false, cToken);
+    }
+
+    public async Task CrawlAllMapsAsync(Stream outputStream, bool leaveOpen, CancellationToken cToken)
+    {
+        if (!outputStream.CanWrite)
+        {
+            throw new ArgumentException("输出流不可写入", nameof(outputStream));
+        }
+
+        try
+        {
+            if (UseGZip)
+            {
+                await using var gZipStream = new GZipStream(outputStream, CompressionLevel.SmallestSize, true);
+                await CrawlAllMapsAsync(gZipStream, cToken);
+            }
+            else
+            {
+                await CrawlAllMapsAsync(outputStream, cToken);
+            }
+        }
+        finally
+        {
+            if (!leaveOpen) await outputStream.DisposeAsync();
+        }
+    }
+
+    private async Task CrawlAllMapsAsync(Stream outputStream, CancellationToken cToken)
+    {
         if (ConcurrentRequests <= 0)
         {
             throw new InvalidOperationException("并发数必须大于0");
@@ -51,9 +92,6 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
         var options = new ParallelOptions { MaxDegreeOfParallelism = ConcurrentRequests, CancellationToken = cToken };
         var writerLock = new object();
 
-        await using Stream outputStream = UseGZip
-            ? new GZipStream(new FileStream(outputPath, FileMode.Create), CompressionLevel.SmallestSize, false)
-            : new FileStream(outputPath, FileMode.Create);
         await using var textWriter = new StreamWriter(outputStream);
         await using var writer = new JsonTextWriter(textWriter);
         writer.Formatting = IndentedOutput ? Formatting.Indented : Formatting.None;
@@ -78,7 +116,7 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
                     var ex = new Exception($"第 {page + 1} 页没有数据");
                     progress?.Report(new ProgressReport { Error = ex });
                     if (ExitOnError) throw ex;
-                    return; // Skip empty pages
+                    return;
                 }
 
                 if (docs.Type != JTokenType.Array)
