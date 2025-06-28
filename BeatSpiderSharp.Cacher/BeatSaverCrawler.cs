@@ -29,11 +29,6 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
 
     public bool ExitOnError { get; init; }
 
-    ~BeatSaverCrawler()
-    {
-        _client.Dispose();
-    }
-
     void IDisposable.Dispose()
     {
         _client.Dispose();
