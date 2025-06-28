@@ -1,32 +1,30 @@
-﻿using System.CommandLine.Parsing;
-using BeatSpiderSharp.CLI.Command;
+﻿using System.CommandLine;
+using System.CommandLine.Parsing;
+using BeatSpiderSharp.CLI.CLIRunners;
 
-namespace BeatSpiderSharp.CLI;
+var rootCommand = new RootCommand();
+new BeatSpiderRunner().SetupCommand(rootCommand);
 
-public static class Program
+var commandLineOptions = new CommandLineConfiguration(rootCommand)
 {
-    private static async Task Main(string[] args)
-    {
-        var code = 0;
-        var parsed = CommandParser.ParseCommandForHandler(args, async options =>
-        {
-            try
-            {
-                code = await new BeatSpiderCLI(options.Verbose).Run(options);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Unhandled exception:");
-                Console.WriteLine(e);
-                code = -1;
-            }
-        });
-        var result = await parsed.InvokeAsync();
-        if (result != 0)
-        {
-            code = result;
-        }
+    EnablePosixBundling = false,
+    EnableDefaultExceptionHandler = false
+};
 
-        Environment.ExitCode = code;
-    }
+var parsedCommand = CommandLineParser.Parse(rootCommand, args, commandLineOptions);
+
+var code = 0;
+try
+{
+    code = await parsedCommand.InvokeAsync();
+}
+catch (Exception e)
+{
+    Console.WriteLine("Unhandled exception:");
+    Console.WriteLine(e);
+    code = -1;
+}
+finally
+{
+    Environment.ExitCode = code;
 }

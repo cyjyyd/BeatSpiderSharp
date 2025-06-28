@@ -1,5 +1,4 @@
-﻿using BeatSpiderSharp.CLI.Command;
-using BeatSpiderSharp.Core;
+﻿using BeatSpiderSharp.Core;
 using BeatSpiderSharp.Core.Legacy;
 using BeatSpiderSharp.Core.Models.Preset;
 using BeatSpiderSharp.Core.Utilities;
@@ -26,10 +25,9 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
         configuration
             // .WriteTo.File("BeatSpiderCLI.log", rollingInterval: RollingInterval.Day)
             .WriteTo.Console();
-        
     }
 
-    public async Task<int> Run(Options options)
+    public async Task<int> Run(BeatSpiderOptions options)
     {
         Log.Information("BeatSpiderCLI!");
 
@@ -53,7 +51,7 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
 
             // LegacyPresetLoader.SaveLegacyPreset(preset, "./output.json");
             // allow empty author
-            var author = options.PresetAuthor ?? Environment.UserName; 
+            var author = options.PresetAuthor ?? Environment.UserName;
             preset = legacy.ConvertToPreset(Path.GetFileNameWithoutExtension(options.InputPreset), author);
 
             if (!string.IsNullOrWhiteSpace(options.SaveConvertedPresetPath))
@@ -122,10 +120,10 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
         return 0;
     }
 
-    private void OverwriteOptions(Preset preset, Options options)
+    private void OverwriteOptions(Preset preset, BeatSpiderOptions options)
     {
         preset.Author = options.PresetAuthor ?? preset.Author;
-        
+
         var output = preset.Output;
         if (options.DisablePlaylistOutput)
         {

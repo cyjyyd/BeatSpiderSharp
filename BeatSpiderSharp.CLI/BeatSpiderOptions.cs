@@ -1,24 +1,24 @@
-﻿namespace BeatSpiderSharp.CLI.Command;
+﻿namespace BeatSpiderSharp.CLI;
 
-public record Options
+public record BeatSpiderOptions
 {
     public string InputPreset { get; init; } = "";
-    
+
     public string? OutputPlaylist { get; init; }
-    
+
     public string? OutputSongPath { get; init; }
-    
+
     public string? PresetAuthor { get; init; }
-    
+
     public bool DisablePlaylistOutput { get; init; }
-    
+
     public bool DisableSongDownload { get; init; }
-    
+
     public bool InputIsLegacy { get; init; }
 
     public string? SaveConvertedPresetPath { get; init; }
-    
+
     public bool ConvertPresetAndExit { get; init; }
-    
+
     public bool Verbose { get; init; }
 }
