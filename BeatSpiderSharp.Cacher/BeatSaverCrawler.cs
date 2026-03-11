@@ -98,6 +98,9 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
         await writer.WritePropertyNameAsync("docs", cToken);
         await writer.WriteStartArrayAsync(cToken);
 
+        await writer.FlushAsync(cToken);
+        GC.Collect();
+
         var stopwatch = new Stopwatch();
         var tasks = new Task<JArray?>[ConcurrentRequests];
         for (var basePage = 0; basePage < totalPages; basePage += ConcurrentRequests)
@@ -132,6 +135,7 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
                     CurrentPage = endPage + 1,
                     TotalPages = totalPages
                 });
+                GC.Collect();
             }
             catch (OperationCanceledException)
             {
