@@ -89,8 +89,6 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
         }
 
         var totalPages = await GetTotalPagesAsync();
-        var options = new ParallelOptions { MaxDegreeOfParallelism = ConcurrentRequests, CancellationToken = cToken };
-        var writerLock = new object();
 
         await using var textWriter = new StreamWriter(outputStream);
         await using var writer = new JsonTextWriter(textWriter);
@@ -99,45 +97,39 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
         await writer.WriteStartObjectAsync(cToken);
         await writer.WritePropertyNameAsync("docs", cToken);
         await writer.WriteStartArrayAsync(cToken);
-        await Parallel.ForEachAsync(Enumerable.Range(0, totalPages), options, async (page, ct) =>
+
+        var stopwatch = new Stopwatch();
+        var tasks = new Task<JArray?>[ConcurrentRequests];
+        for (var basePage = 0; basePage < totalPages; basePage += ConcurrentRequests)
         {
-            var stopwatch = Stopwatch.StartNew();
+            stopwatch.Reset();
+            stopwatch.Start();
+            var endPage = 0;
             try
             {
-                await using var resStream = await _client.GetStreamAsync($"{ApiUrl}{page}?pageSize={PageSize}", ct);
-                using var streamReader = new StreamReader(resStream, Encoding.UTF8);
-                await using var jsonReader = new JsonTextReader(streamReader);
-
-                var res = await JObject.LoadAsync(jsonReader, ct);
-                var docs = res["docs"];
-
-                if (docs is null || !docs.HasValues)
+                for (var offset = 0; offset < ConcurrentRequests && basePage + offset < totalPages; offset++)
                 {
-                    var ex = new Exception($"第 {page + 1} 页没有数据");
-                    progress?.Report(new ProgressReport { Error = ex });
-                    if (ExitOnError) throw ex;
-                    return;
+                    var page = basePage + offset;
+                    tasks[offset] = Task.Run(() => CrawlPageAsync(page, cToken), cToken);
+                    endPage = page;
                 }
 
-                if (docs.Type != JTokenType.Array)
+                await Task.WhenAll(tasks);
+                foreach (var task in tasks)
                 {
-                    var ex = new Exception($"第 {page + 1} 页数据错误， 'docs' 不是一个数组");
-                    progress?.Report(new ProgressReport { Error = ex });
-                    if (ExitOnError) throw ex;
-                    return;
-                }
+                    var docs = await task;
+                    if (docs is null) continue;
 
-                lock (writerLock)
-                {
                     foreach (var item in docs)
                     {
-                        item.WriteTo(writer);
+                        await item.WriteToAsync(writer, cToken);
                     }
                 }
 
+                await writer.FlushAsync(cToken);
                 progress?.Report(new ProgressReport
                 {
-                    CurrentPage = page + 1,
+                    CurrentPage = endPage + 1,
                     TotalPages = totalPages
                 });
             }
@@ -150,7 +142,7 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
             {
                 progress?.Report(new ProgressReport
                 {
-                    CurrentPage = page + 1,
+                    CurrentPage = endPage + 1,
                     TotalPages = totalPages,
                     Error = ex
                 });
@@ -159,24 +151,26 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
             finally
             {
                 stopwatch.Stop();
-
-                if (!ct.IsCancellationRequested)
-                {
-                    var elapsedTime = (int)stopwatch.Elapsed.TotalMilliseconds;
-
-                    if (MinRequestTime > 0 && elapsedTime < MinRequestTime)
-                    {
-                        var delay = MinRequestTime - elapsedTime;
-                        if (Verbose) Console.WriteLine($"第 {page + 1} 页耗时 {elapsedTime}ms, 添加额外延迟 {delay}ms");
-                        await Task.Delay(delay, ct);
-                    }
-                    else
-                    {
-                        if (Verbose) Console.WriteLine($"第 {page + 1} 页耗时 {elapsedTime}ms");
-                    }
-                }
             }
-        });
+
+            if (cToken.IsCancellationRequested) return;
+            var elapsedTime = (int)stopwatch.Elapsed.TotalMilliseconds;
+            if (MinRequestTime > 0 && elapsedTime < MinRequestTime)
+            {
+                var delay = MinRequestTime - elapsedTime;
+                if (Verbose)
+                {
+                    Console.WriteLine($"第 {basePage + 1}-{endPage + 1} 页耗时 {elapsedTime}ms, 添加额外延迟 {delay}ms");
+                }
+
+                await Task.Delay(delay, cToken);
+            }
+            else
+            {
+                if (Verbose) Console.WriteLine($"第 {basePage + 1}-{endPage + 1} 页耗时 {elapsedTime}ms");
+            }
+        }
+
         await writer.WriteEndArrayAsync(cToken);
         await writer.WritePropertyNameAsync("date", cToken);
         await writer.WriteValueAsync(DateTimeOffset.UtcNow.ToUnixTimeSeconds(), cToken);
@@ -188,5 +182,32 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
         var response = await _client.GetStringAsync($"{ApiUrl}0?pageSize={PageSize}");
         var doc = JObject.Parse(response);
         return (int)Math.Ceiling(doc["info"]!["total"]!.ToObject<double>() / PageSize);
+    }
+
+    private async Task<JArray?> CrawlPageAsync(int page, CancellationToken ct)
+    {
+        await using var resStream = await _client.GetStreamAsync($"{ApiUrl}{page}?pageSize={PageSize}", ct);
+        using var streamReader = new StreamReader(resStream, Encoding.UTF8);
+        await using var jsonReader = new JsonTextReader(streamReader);
+
+        var res = await JObject.LoadAsync(jsonReader, ct);
+        var docs = res["docs"];
+
+        if (docs is null || !docs.HasValues)
+        {
+            var ex = new Exception($"第 {page + 1} 页没有数据");
+            progress?.Report(new ProgressReport { Error = ex });
+            return ExitOnError ? throw ex : null;
+        }
+
+        if (docs.Type != JTokenType.Array || docs is not JArray array)
+        {
+            var ex = new Exception($"第 {page + 1} 页数据错误， 'docs' 不是一个数组");
+            progress?.Report(new ProgressReport { Error = ex });
+            if (ExitOnError) throw ex;
+            return ExitOnError ? throw ex : null;
+        }
+
+        return array;
     }
 }
