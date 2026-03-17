@@ -2,9 +2,9 @@
 using BeatSpiderSharp.Core.Models.Preset;
 using BeatSpiderSharp.Core.Models.Preset.Enums;
 using BeatSpiderSharp.Core.Models.Preset.FilterOptions;
+using BeatSpiderSharp.Core.Utilities.Extensions;
 using Newtonsoft.Json;
 using Serilog;
-using BeatSpiderSharp.Core.Utilities.Extensions;
 
 namespace BeatSpiderSharp.Core.Legacy;
 
@@ -54,7 +54,7 @@ public static class LegacyPresetLoader
         };
         var input = new InputConfig
         {
-            Source = SongInputSource.SongDetailsCache,
+            Source = SongInputSource.BeatSaver,
             Playlists = string.IsNullOrWhiteSpace(legacyPreset.PlaylistInput.Path)
                 ? []
                 : [legacyPreset.PlaylistInput.Path],
@@ -64,7 +64,7 @@ public static class LegacyPresetLoader
         switch (legacyPreset.SongSource)
         {
             case LegacyPreset.DataSource.LocalCache:
-                input.Source = SongInputSource.SongDetailsCache;
+                input.Source = SongInputSource.BeatSaver;
                 break;
             case LegacyPreset.DataSource.Playlist:
                 input.Source = SongInputSource.Playlists;
@@ -74,23 +74,23 @@ public static class LegacyPresetLoader
                 break;
             case LegacyPreset.DataSource.BeastSaber:
                 Log.Warning("BeastSaber source is not supported!");
-                input.Source = SongInputSource.SongDetailsCache;
+                input.Source = SongInputSource.BeatSaver;
                 break;
             case LegacyPreset.DataSource.Mapper:
                 MergeMapperSetting(options, legacyPreset.Mapper);
-                input.Source = SongInputSource.SongDetailsCache;
+                input.Source = SongInputSource.BeatSaver;
                 break;
             case LegacyPreset.DataSource.ScoreSaber:
                 MergeScoreSaverSetting(options, legacyPreset.ScoreSaber);
-                input.Source = SongInputSource.SongDetailsCache;
+                input.Source = SongInputSource.BeatSaver;
                 break;
             case LegacyPreset.DataSource.BeatSaver:
                 MergeBeatSaverSetting(options, legacyPreset.BeatSaver);
-                input.Source = SongInputSource.SongDetailsCache;
+                input.Source = SongInputSource.BeatSaver;
                 break;
             default:
                 Log.Warning("Unknown song source from legacy preset: {Source}", legacyPreset.SongSource);
-                input.Source = SongInputSource.SongDetailsCache;
+                input.Source = SongInputSource.BeatSaver;
                 break;
         }
 
@@ -291,7 +291,7 @@ public static class LegacyPresetLoader
         {
             options.ExcludeMods.Enable = true;
             options.ExcludeMods.Filter = options.ExcludeMods.Filter
-                .Concat(setting.ExcludeMods.ExcludeMods.ToMMods()).Distinct().ToList();
+                .Concat(setting.ExcludeMods.ExcludeMods.ToMMods()).Distinct().ToHashSet();
         }
     }
 
@@ -348,7 +348,7 @@ public static class LegacyPresetLoader
                 Filter = setting.Tags.Include.Content.ToHashSet(),
                 IsOr = !setting.Tags.Include.And
             },
-            ExcludeTags = new(setting.Tags.Exclude.Content.ToList())
+            ExcludeTags = new(setting.Tags.Exclude.Content.ToHashSet())
             {
                 Enable = setting.Tags.Exclude.Enable
             },

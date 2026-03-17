@@ -1,124 +1,88 @@
-﻿using BeatSaverSharp;
-using BeatSpiderSharp.Core.Interfaces;
+﻿using BeatSpiderSharp.Core.Interfaces;
 using BeatSpiderSharp.Core.Models;
 using BeatSpiderSharp.Core.Models.Preset.Enums;
 using BeatSpiderSharp.Core.Models.Preset.FilterOptions;
 using BeatSpiderSharp.Core.Utilities.Extensions;
 using Serilog;
-using SongDetailsCache.Structs;
 
 namespace BeatSpiderSharp.Core.Filters;
 
 public class DetailFilter: ISongFilter
 {
     private readonly DetailOptions _options;
-
-    private string? _uploaderName;
-
-    public bool LogExclusions { get; init; }
     
     public DetailFilter(DetailOptions options)
     {
         _options = options;
     }
 
-    public async Task InitAsync(BeatSaver beatSaver)
-    {
-        Log.Debug("Initializing DetailFilter");
-        if (_options.UploaderId && _options.UploaderId.Filter != null && _options.UploaderId.Filter.Value > 0)
-        {
-            var id = _options.UploaderId.Filter.Value;
-            Log.Debug("Getting uploader name for uploader id {Id}", id);
-            var user = await beatSaver.User(id);
-            if (user == null)
-            {
-                Log.Error("Failed to get user with id {Id} from BeatSaver", id);
-                throw new Exception($"Failed to get user with id {id} from BeatSaver");
-            }
-            var name = user.Name;
-            if (_options.UploaderName && !string.IsNullOrWhiteSpace(_options.UploaderName.Filter) &&
-                !name.Equals(_options.UploaderName.Filter, StringComparison.InvariantCultureIgnoreCase))
-            {
-                Log.Error(
-                    "UploaderName filter ({Name1}) doesn't match (case insensitive) BeatSaver username ({Name2}) of id {Id}",
-                    _options.UploaderName.Filter, name, id);
-                throw new Exception(
-                    $"UploaderName filter ({_options.UploaderName.Filter}) doesn't match (case insensitive) BeatSaver username ({name}) of id {id}");
-            }
-            _uploaderName = name;
-            Log.Information("Using uploader name {Name} for uploader id {Id}", _uploaderName, id);
-        }
-    }
-
     public bool FilterSong(BeatSpiderSong song)
     {
         var filter = _options;
-        var details = song.SongDetails;
+        var map = song.BeatSaverSong;
+        var latest = map.LatestVersion;
+        var diffs = latest.Diffs;
+        var stats = map.Stats;
 
-        if (!string.IsNullOrWhiteSpace(_uploaderName))
+        if (filter.UploaderId && filter.UploaderId.Filter != null &&
+            map.Uploader?.Id != filter.UploaderId.Filter.Value)
         {
-            // Uploader name queried from BeatSaver based on UploaderId
-            if (!_uploaderName.Equals(details.uploaderName, StringComparison.InvariantCultureIgnoreCase))
-            {
-                LogExclusion(song, "Uploader name doesn't match");
-                return false;
-            }
-        } 
-        else if (filter.UploaderName && !string.IsNullOrWhiteSpace(filter.UploaderName.Filter) &&
-                 !filter.UploaderName.Filter.Equals(details.uploaderName, StringComparison.InvariantCultureIgnoreCase))
+            LogExclusion(song, "Uploader id doesn't match");
+            return false;
+        }
+
+        if (filter.UploaderName && !string.IsNullOrWhiteSpace(filter.UploaderName.Filter) &&
+            !filter.UploaderName.Filter.Equals(map.Uploader?.Name, StringComparison.InvariantCultureIgnoreCase))
         {
             LogExclusion(song, "Uploader name doesn't match");
             return false;
         }
-        
-        if (filter.UploadTime && !filter.UploadTime.InRange(DateTimeOffset.FromUnixTimeSeconds(details.uploadTimeUnix)))
+
+        if (filter.UploadTime && !filter.UploadTime.InRange(map.Uploaded))
         {
             LogExclusion(song, "Upload time not in range");
             return false;
         }
-        
-        if (filter.IncludeTags)
+
+        if (filter.IncludeTags && !filter.IncludeTags.SatisfiedBy(map.Tags))
         {
-            var required = filter.IncludeTags.Filter;
-            var pass = filter.IncludeTags.IsOr ? required.Any(details.HasTag) : required.All(details.HasTag);
-            if (!pass)
-            {
-                LogExclusion(song, "Required tags not found");
-                return false;
-            }
+            LogExclusion(song, "Required tags not found");
+            return false;
         }
-        
-        if (filter.ExcludeTags && filter.ExcludeTags.Filter.Any(details.HasTag))
+
+        if (filter.ExcludeTags && filter.ExcludeTags.Filter.Intersect(map.Tags).Any())
         {
             LogExclusion(song, "Excluded tags found");
             return false;
         }
-        
-        if (filter.UpVotes && !filter.UpVotes.InRange((int) details.upvotes))
+
+        if (filter.UpVotes && !filter.UpVotes.InRange(stats?.Upvotes))
         {
             LogExclusion(song, "Up votes not in range");
             return false;
         }
-        
-        if (filter.UpVotePercentage && !filter.UpVotePercentage.InRange(details.upvotes / (float) (details.upvotes + details.downvotes) * 100))
+
+        if (filter.UpVotePercentage &&
+            !filter.UpVotePercentage.InRange(stats?.Upvotes * 100f / (stats?.Upvotes + stats?.Downvotes)))
         {
             LogExclusion(song, "Up vote percentage not in range");
             return false;
         }
-        
-        if (filter.DownVotes && !filter.DownVotes.InRange((int) details.downvotes))
+
+        if (filter.DownVotes && !filter.DownVotes.InRange(stats?.Downvotes))
         {
             LogExclusion(song, "Down votes not in range");
             return false;
         }
-        
-        if (filter.DownVotePercentage && !filter.DownVotePercentage.InRange(details.downvotes / (float) (details.upvotes + details.downvotes) * 100))
+
+        if (filter.DownVotePercentage &&
+            !filter.DownVotePercentage.InRange(stats?.Downvotes * 100f / (stats?.Upvotes + stats?.Downvotes)))
         {
             LogExclusion(song, "Down vote percentage not in range");
             return false;
         }
-        
-        if (filter.Rating && !filter.Rating.InRange(details.rating * 100))
+
+        if (filter.Rating && !filter.Rating.InRange(map.Stats?.Score * 100))
         {
             LogExclusion(song, "Rating not in range");
             return false;
@@ -126,8 +90,10 @@ public class DetailFilter: ISongFilter
 
         if (filter.FullSpread)
         {
-            var pass = Enum.GetValues<MapCharacteristic>().Where(chara => chara != MapCharacteristic.Custom)
-                .Any(chara => Enum.GetValues<MapDifficulty>().All(diff => details.GetDifficulty(out _, diff, chara)));
+            var pass = diffs
+                .GroupBy(diff => diff.GetMCharacteristic())
+                .Where(group => group.Key is not (null or MCharacteristic.Lightshow or MCharacteristic.Other))
+                .Any(group => group.Distinct().Count() == Enum.GetValues<MDifficulty>().Length);
             if (!pass)
             {
                 LogExclusion(song, "Not full spread");
@@ -137,7 +103,7 @@ public class DetailFilter: ISongFilter
         
         if (filter.IncludeCharacteristics)
         {
-            var mapCharas = details.difficulties.Select(diff => diff.characteristic.ToMCharacteristic()).ToHashSet();
+            var mapCharas = diffs.Select(diff => diff.GetMCharacteristic()).SelectNotNull().ToHashSet();
             if (!filter.IncludeCharacteristics.SatisfiedBy(mapCharas))
             {
                 LogExclusion(song, "Required characteristics not found");
@@ -147,7 +113,7 @@ public class DetailFilter: ISongFilter
         
         if (filter.IncludeDifficulties)
         {
-            var mapDiffs = details.difficulties.Select(diff => diff.difficulty.ToMDifficulty()).ToHashSet();
+            var mapDiffs = diffs.Select(diff => diff.GetMDifficulty()).SelectNotNull().ToHashSet();
             if (!filter.IncludeDifficulties.SatisfiedBy(mapDiffs))
             {
                 LogExclusion(song, "Required difficulties not found");
@@ -157,7 +123,7 @@ public class DetailFilter: ISongFilter
 
         if (filter.RequireMods)
         {
-            var pass = details.difficulties.Any(diff => filter.RequireMods.SatisfiedBy(diff.mods.ToMMods()));
+            var pass = diffs.Any(diff => filter.RequireMods.SatisfiedBy(diff.GetMMods()));
             if (!pass)
             {
                 LogExclusion(song, "Required mods not found");
@@ -168,51 +134,50 @@ public class DetailFilter: ISongFilter
         if (filter.ExcludeMods)
         {
             var excluded = filter.ExcludeMods.Filter;
-            // excluded.Any(diff.mods.ToMMods().Contains) --> diff contains any of the excluded mods
-            if (details.difficulties.All(diff => excluded.Any(diff.mods.ToMMods().Contains)))
+            if (diffs.All(diff => excluded.Any(diff.GetMMods().Contains)))
             {
                 LogExclusion(song, "All difficulties contain excluded mods");
                 return false;
             }
         }
 
-        if (filter.Bpm && !filter.Bpm.InRange(details.bpm))
+        if (filter.Bpm && !filter.Bpm.InRange(map.Metadata?.Bpm))
         {
             LogExclusion(song, "BPM not in range");
             return false;
         }
-        
-        if (filter.Duration && !filter.Duration.InRange((int) details.songDurationSeconds))
+
+        if (filter.Duration && !filter.Duration.InRange(map.Metadata?.Duration))
         {
             LogExclusion(song, "Duration not in range");
             return false;
         }
-        
-        if (filter.Njs && !details.difficulties.Any(difficulty => filter.Njs.InRange(difficulty.njs)))
+
+        if (filter.Njs && !diffs.Any(diff => filter.Njs.InRange(diff.Njs)))
         {
             LogExclusion(song, "NJS not in range");
             return false;
         }
-        
-        if (filter.Nps && !details.difficulties.Any(difficulty => filter.Nps.InRange(difficulty.notes / (float) details.songDurationSeconds)))
+
+        if (filter.Nps && !diffs.Any(diff => filter.Nps.InRange(diff.Nps)))
         {
             LogExclusion(song, "NPS not in range");
             return false;
         }
-                
-        if (filter.Notes && !details.difficulties.Any(difficulty => filter.Njs.InRange(difficulty.notes)))
+
+        if (filter.Notes && !diffs.Any(diff => filter.Notes.InRange(diff.Notes)))
         {
             LogExclusion(song, "Notes not in range");
             return false;
         }
-        
-        if (filter.Bombs && !details.difficulties.Any(difficulty => filter.Bombs.InRange((int) difficulty.bombs)))
+
+        if (filter.Bombs && !diffs.Any(diff => filter.Bombs.InRange(diff.Bombs)))
         {
             LogExclusion(song, "Bombs not in range");
             return false;
         }
-        
-        if (filter.Walls && !details.difficulties.Any(difficulty => filter.Walls.InRange((int) difficulty.obstacles)))
+
+        if (filter.Walls && !diffs.Any(diff => filter.Walls.InRange(diff.Obstacles)))
         {
             LogExclusion(song, "Walls not in range");
             return false;
@@ -220,15 +185,14 @@ public class DetailFilter: ISongFilter
 
         if (filter.ScoreSaberRanking)
         {
-            var states = details.rankedStates;
             var pass = filter.ScoreSaberRanking.Filter.Any(status => status switch 
             {
-                RankingStatus.Unranked => !states.HasFlag(RankedStates.ScoresaberRanked) && !states.HasFlag(RankedStates.ScoresaberQualified),
-                RankingStatus.Ranked => states.HasFlag(RankedStates.ScoresaberRanked),
-                RankingStatus.Qualified => states.HasFlag(RankedStates.ScoresaberQualified),
+                RankingStatus.Unranked => map is { Ranked: false, Qualified: false },
+                RankingStatus.Ranked => map.Ranked,
+                RankingStatus.Qualified => map.Qualified,
                 _ => false
             });
-            
+
             if (!pass)
             {
                 LogExclusion(song, "Required ScoreSaber ranking status not found");
@@ -238,15 +202,14 @@ public class DetailFilter: ISongFilter
 
         if (filter.BeatLeaderRanking)
         {
-            var states = details.rankedStates;
             var pass = filter.BeatLeaderRanking.Filter.Any(status => status switch 
             {
-                RankingStatus.Unranked => !states.HasFlag(RankedStates.BeatleaderRanked) && !states.HasFlag(RankedStates.BeatleaderQualified),
-                RankingStatus.Ranked => states.HasFlag(RankedStates.BeatleaderRanked),
-                RankingStatus.Qualified => states.HasFlag(RankedStates.BeatleaderQualified),
+                RankingStatus.Unranked => map is { BlRanked: false, BlQualified: false },
+                RankingStatus.Ranked => map.BlRanked,
+                RankingStatus.Qualified => map.BlQualified,
                 _ => false
             });
-            
+
             if (!pass)
             {
                 LogExclusion(song, "Required BeatLeader ranking status not found");
@@ -256,7 +219,7 @@ public class DetailFilter: ISongFilter
 
         if (filter.ScoreSaberStars)
         {
-            var pass = details.difficulties.Any(diff => filter.ScoreSaberStars.InRange(diff.stars));
+            var pass = diffs.Any(diff => filter.ScoreSaberStars.InRange(diff.Stars));
             if (!pass)
             {
                 LogExclusion(song, "ScoreSaber stars not in range");
@@ -266,7 +229,7 @@ public class DetailFilter: ISongFilter
         
         if (filter.BeatLeaderStars)
         {
-            var pass = details.difficulties.Any(diff => filter.BeatLeaderStars.InRange(diff.starsBeatleader));
+            var pass = diffs.Any(diff => filter.BeatLeaderStars.InRange(diff.BlStars));
             if (!pass)
             {
                 LogExclusion(song, "BeatLeader stars not in range");

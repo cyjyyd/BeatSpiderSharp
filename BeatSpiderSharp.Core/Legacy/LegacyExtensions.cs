@@ -1,13 +1,12 @@
 ﻿using BeatSpiderSharp.Core.Models.Preset.Enums;
-using SongDetailsCache.Structs;
 
 namespace BeatSpiderSharp.Core.Legacy;
 
 public static class LegacyExtensions
 {
-    public static IList<MMod> ToMMods(this LegacyPreset.ModRequirements req)
+    public static ISet<MMod> ToMMods(this LegacyPreset.ModRequirements req)
     {
-        var result = new List<MMod>();
+        var result = new HashSet<MMod>();
         if (req.NoodleExtensions) result.Add(MMod.NoodleExtensions);
         if (req.MappingExtensions) result.Add(MMod.MappingExtensions);
         if (req.Chroma) result.Add(MMod.Chroma);

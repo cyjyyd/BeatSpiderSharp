@@ -1,31 +1,36 @@
-﻿using SongDetailsSong = SongDetailsCache.Structs.Song;
+﻿using BeatSpiderSharp.Core.Models.BeatSaver;
 
 namespace BeatSpiderSharp.Core.Models;
 
 public class BeatSpiderSong
 {
-    public string Hash { get; init; } = string.Empty;
-    
-    public string Bsr { get; init; } = string.Empty;
-    
-    public SongDetailsSong SongDetails { get; init; }
-    
-    // public BeatSaverSharp.Models.Beatmap? Beatmap { get; set; }
+    public required string Hash { get; init; }
+
+    public required string Bsr { get; init; }
+
+    public required Song BeatSaverSong { get; init; }
     
     // TODO add more info if needed
 
-    public static BeatSpiderSong FromSongDetailsSong(SongDetailsSong song)
+    public static BeatSpiderSong FromBeatSaverSong(Song song)
     {
+        if (!ValidateBeatSaverSong(song))
+        {
+            throw new ArgumentException("BeatSaver song must have id and hash");
+        }
         return new BeatSpiderSong
         {
-            Hash = song.hash,
-            Bsr = song.key,
-            SongDetails = song
+            Hash = song.LatestVersion.Hash!,
+            Bsr = song.Id!,
+            BeatSaverSong = song
         };
     }
-    
-    public override string ToString()
-    {
-        return $"{Bsr} ({SongDetails.songName} - {SongDetails.levelAuthorName})";
-    }
+
+    public static bool ValidateBeatSaverSong(Song? song) =>
+        song != null && !string.IsNullOrWhiteSpace(song.Id)
+                     && song.Versions.Count > 0
+                     && !string.IsNullOrWhiteSpace(song.LatestVersion.Hash);
+
+    public override string ToString() =>
+        $"{Bsr} ({BeatSaverSong.Metadata?.SongName} - {BeatSaverSong.Metadata?.LevelAuthorName})";
 }

@@ -34,7 +34,7 @@ public class PlaylistExporter
 
         foreach (var song in songs)
         {
-            playlist.Add(song.Hash, song.SongDetails.songName, song.Bsr, null);
+            playlist.Add(song.Hash, song.BeatSaverSong.Metadata?.SongName, song.Bsr, null);
         }
         
         Log.Debug("Saving playlist {Name} to {Target}", title, targetPath);

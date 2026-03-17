@@ -9,7 +9,7 @@ public class DetailOptions
     public Option<string> UploaderName { get; set; } = new(string.Empty);
     public RangeOption<DateTimeOffset> UploadTime { get; set; } = new();
     public LogicIncludeOption<string> IncludeTags { get; set; } = new();
-    public Option<IList<string>> ExcludeTags { get; set; } = new([]);
+    public Option<ISet<string>> ExcludeTags { get; set; } = new(new HashSet<string>());
     public RangeOption<int> UpVotes { get; set; } = new();
     public RangeOption<float> UpVotePercentage { get; set; } = new();
     public RangeOption<int> DownVotes { get; set; } = new();
@@ -19,7 +19,7 @@ public class DetailOptions
     public LogicIncludeOption<MCharacteristic> IncludeCharacteristics { get; set; } = new();
     public LogicIncludeOption<MDifficulty> IncludeDifficulties { get; set; } = new();
     public LogicIncludeOption<MMod> RequireMods { get; set; } = new();
-    public Option<IList<MMod>> ExcludeMods { get; set; } = new([]);
+    public Option<ISet<MMod>> ExcludeMods { get; set; } = new(new HashSet<MMod>());
     public RangeOption<float> Bpm { get; set; } = new();
     public RangeOption<int> Duration { get; set; } = new();
     public RangeOption<float> Njs { get; set; } = new();

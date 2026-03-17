@@ -2,7 +2,9 @@
 
 public record BeatSpiderOptions
 {
-    public string InputPreset { get; init; } = "";
+    public required string InputPreset { get; init; }
+
+    public required string SongCachePath { get; init; }
 
     public string? OutputPlaylist { get; init; }
 
