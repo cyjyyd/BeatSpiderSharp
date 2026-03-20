@@ -2,7 +2,11 @@
 
 public record BeatSpiderOptions
 {
-    public string InputPreset { get; init; } = "";
+    public required string InputPreset { get; init; }
+
+    public required string SongCachePath { get; init; }
+
+    public bool GZipCacheData { get; init; }
 
     public string? OutputPlaylist { get; init; }
 

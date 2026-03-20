@@ -21,11 +21,6 @@ public class SpecialFolders: IDisposable
         Directory.CreateDirectory(TempFolder);
     }
     
-    ~SpecialFolders()
-    {
-        Dispose();
-    }
-    
     public void Dispose()
     {
         GC.SuppressFinalize(this);

@@ -1,5 +1,6 @@
 ﻿namespace BeatSpiderSharp.Core.Models.Preset.Enums;
 
+//TODO support Vivify
 public enum MMod
 {
     MappingExtensions,

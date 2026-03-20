@@ -10,12 +10,24 @@ internal class BeatSpiderRunner : RunnerBase
         Description = "Input preset file path"
     };
 
+    private readonly Option<string> _songCachePath = new("--song-cache-data", "-s")
+    {
+        Required = true,
+        Description = "Song cache data file path"
+    };
+
+    private readonly Option<bool> _gZipCacheData = new("--gzip-cache-data", "-z")
+    {
+        Description = "Song cache data is GZip format",
+        DefaultValueFactory = _ => false
+    };
+
     private readonly Option<string> _outputPlaylist = new("--output-playlist", "-o")
     {
         Description = "Output playlist file path"
     };
 
-    private readonly Option<string> _outputSongPath = new("--output-song-path", "-s")
+    private readonly Option<string> _outputSongPath = new("--output-song-path", "-O")
     {
         Description = "Output song path"
     };
@@ -63,6 +75,8 @@ internal class BeatSpiderRunner : RunnerBase
     protected override Option[] Options =>
     [
         _inputPreset,
+        _songCachePath,
+        _gZipCacheData,
         _outputPlaylist,
         _outputSongPath,
         _presetAuthor,
@@ -81,6 +95,8 @@ internal class BeatSpiderRunner : RunnerBase
         var options = new BeatSpiderOptions
         {
             InputPreset = parseResult.GetRequiredValue(_inputPreset),
+            SongCachePath = parseResult.GetRequiredValue(_songCachePath),
+            GZipCacheData = parseResult.GetRequiredValue(_gZipCacheData),
             OutputPlaylist = parseResult.GetValue(_outputPlaylist),
             OutputSongPath = parseResult.GetValue(_outputSongPath),
             PresetAuthor = parseResult.GetValue(_presetAuthor),
@@ -92,6 +108,8 @@ internal class BeatSpiderRunner : RunnerBase
             Verbose = parseResult.GetRequiredValue(_verbose)
         };
 
-        return await new BeatSpiderCLI(options.Verbose).Run(options);
+        using var beatSpider = new BeatSpiderCLI(options.Verbose);
+
+        return await beatSpider.Run(options);
     }
 }

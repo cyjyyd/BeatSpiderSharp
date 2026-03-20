@@ -1,22 +1,13 @@
-﻿using BeatSaverSharp;
-using BeatSpiderSharp.Core.Filters;
-using BeatSpiderSharp.Core.Interfaces;
+﻿using BeatSpiderSharp.Core.Filters;
 using BeatSpiderSharp.Core.Models;
 using BeatSpiderSharp.Core.Models.Preset;
-using BeatSpiderSharp.Core.Models.Preset.Enums;
-using BeatSpiderSharp.Core.SongSource;
 using Serilog;
-using SongDetailsCache;
 
 namespace BeatSpiderSharp.Core;
 
-public abstract class BeatSpider
+public abstract class BeatSpider : IDisposable
 {
     protected SpecialFolders SpecialFolders { get; } = new();
-
-    protected BeatSaver BeatSaver { get; } = new("BeatSpiderSharp", new Version(1, 0, 0));
-
-    protected SongDetails SongDetails { get; private set; } = null!;
 
     protected bool Verbose { get; }
 
@@ -24,7 +15,6 @@ public abstract class BeatSpider
     {
         Verbose = verbose;
         SetupLogging();
-        SongDetails.SetCacheDirectory(SpecialFolders.DataFolder);
     }
 
     private void SetupLogging()
@@ -38,23 +28,10 @@ public abstract class BeatSpider
     {
     }
 
-    protected virtual async Task InitAsync()
+    void IDisposable.Dispose()
     {
-        Log.Information("BeatSpider initializing");
-        SongDetails = await SongDetails.Init();
-        Log.Debug("SongDetails initialized");
-    }
-
-    protected ISongSource GetSongSource(InputConfig input)
-    {
-        Log.Information("Song source: {Source}", input.Source);
-
-        return input.Source switch
-        {
-            SongInputSource.Playlists => new PlaylistSongs(input.Playlists, SongDetails, SpecialFolders.TempFolder),
-            SongInputSource.ManualInput => new ManualSongInput(input.ManualInput, SongDetails),
-            _ => new SongDetailsSongs(SongDetails) { ReverseOrder = true }
-        };
+        SpecialFolders.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     protected async Task<IEnumerable<BeatSpiderSong>?> FilterSongsAsync(IEnumerable<BeatSpiderSong> songs, Preset preset)
@@ -67,17 +44,8 @@ public abstract class BeatSpider
         }
 
         var detailFilters = detailFilterOptions
-            .Select(options => new RootFilter(options) { LogExclusions = Verbose })
+            .Select(options => new RootFilter(options))
             .ToList();
-        try
-        {
-            await Task.WhenAll(detailFilters.Select(filter => filter.InitAsync(BeatSaver)));
-        }
-        catch (Exception e)
-        {
-            Log.Error(e, "Failed to initialize one or more filters");
-            return null;
-        }
 
         return songs.Where(song => detailFilters.Any(filter => filter.FilterSong(song)));
     }
@@ -95,7 +63,8 @@ public abstract class BeatSpider
         {
             songs = songs.Select(song =>
             {
-                Log.Verbose("Song {Bsr} ({Title} - {Mapper}) included", song.Bsr, song.SongDetails.songName, song.SongDetails.uploaderName);
+                Log.Verbose("Song {Bsr} ({Title} - {Mapper}) included", song.Bsr, song.BeatSaverSong.Metadata?.SongName,
+                    song.BeatSaverSong.Uploader?.Name);
                 return song;
             });
         }

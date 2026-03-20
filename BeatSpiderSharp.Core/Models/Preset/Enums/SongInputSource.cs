@@ -2,7 +2,7 @@
 
 public enum SongInputSource
 {
-    SongDetailsCache = 0,
+    BeatSaver = 0,
     Playlists = 1,
     ManualInput = 2
 }

@@ -4,7 +4,7 @@ namespace BeatSpiderSharp.Core.Models.Preset;
 
 public class InputConfig
 {
-    public SongInputSource Source { get; set; } = SongInputSource.SongDetailsCache;
+    public SongInputSource Source { get; set; } = SongInputSource.BeatSaver;
 
     public IList<string> Playlists { get; set; } = new List<string>();
 

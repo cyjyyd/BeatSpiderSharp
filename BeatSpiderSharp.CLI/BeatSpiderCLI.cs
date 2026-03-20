@@ -1,7 +1,14 @@
-﻿using BeatSpiderSharp.Core;
+﻿using System.IO.Compression;
+using BeatSpiderSharp.Core;
 using BeatSpiderSharp.Core.Legacy;
+using BeatSpiderSharp.Core.Models;
+using BeatSpiderSharp.Core.Models.BeatSaver;
 using BeatSpiderSharp.Core.Models.Preset;
+using BeatSpiderSharp.Core.Models.Preset.Enums;
+using BeatSpiderSharp.Core.SongSource;
 using BeatSpiderSharp.Core.Utilities;
+using BeatSpiderSharp.Core.Utilities.Extensions;
+using Newtonsoft.Json;
 using Serilog;
 
 namespace BeatSpiderSharp.CLI;
@@ -34,8 +41,6 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
 #if DEBUG
         Log.Debug("Options: {@Options}", options);
 #endif
-
-        await InitAsync();
 
         Preset preset;
 
@@ -104,9 +109,45 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
             return 1;
         }
 
+        // load songs
+        if (!File.Exists(options.SongCachePath))
+        {
+            Log.Error("Song cache file not found");
+            return 1;
+        }
+
+        Log.Information("Loading songs from cached data");
+        Stream songDataStream = File.OpenRead(options.SongCachePath);
+        if (options.GZipCacheData)
+        {
+            songDataStream = new GZipStream(songDataStream, CompressionMode.Decompress);
+        }
+
+        await using var jsonReader = new JsonTextReader(new StreamReader(songDataStream));
+        var serializer = JsonSerializer.Create(new JsonSerializerSettings
+        {
+            Formatting = Formatting.Indented,
+#if DEBUG
+            MissingMemberHandling = MissingMemberHandling.Error
+#endif
+        });
+
+        Log.Information("Loading song inputs");
+        var allSongs = serializer
+            .DeserializeArrayAsync<Song>(jsonReader, ["docs"])
+            .ToBlockingEnumerable() //TODO async enumerable
+            .Where(BeatSpiderSong.ValidateBeatSaverSong)
+            .Select(song => BeatSpiderSong.FromBeatSaverSong(song!));
+
+        allSongs = preset.Input.Source switch
+        {
+            SongInputSource.Playlists => SongSourceFactory.CreateFromPlaylists(preset.Input.Playlists, allSongs),
+            SongInputSource.ManualInput => SongSourceFactory.CreateFromManualSongInput(preset.Input.ManualInput,
+                allSongs),
+            _ => allSongs
+        };
+        
         Log.Information("Starting filtering for preset: {Preset}", preset.Name);
-        var songSource = GetSongSource(preset.Input);
-        var allSongs = songSource.GetSongs();
         var filteredSongs = await FilterSongsAsync(allSongs, preset);
         if (filteredSongs == null)
         {
