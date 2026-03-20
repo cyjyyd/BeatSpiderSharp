@@ -2,7 +2,6 @@
 using BeatSpiderSharp.Core.Models;
 using BeatSpiderSharp.Core.Models.Preset;
 using Serilog;
-using SongDetailsCache;
 
 namespace BeatSpiderSharp.Core;
 
@@ -16,7 +15,6 @@ public abstract class BeatSpider
     {
         Verbose = verbose;
         SetupLogging();
-        SongDetails.SetCacheDirectory(SpecialFolders.DataFolder);
     }
 
     private void SetupLogging()
