@@ -93,7 +93,9 @@ public class DetailFilter: ISongFilter
             var pass = diffs
                 .GroupBy(diff => diff.GetMCharacteristic())
                 .Where(group => group.Key is not (null or MCharacteristic.Lightshow or MCharacteristic.Other))
-                .Any(group => group.Distinct().Count() == Enum.GetValues<MDifficulty>().Length);
+                .Any(group =>
+                    group.DistinctBy(diff => diff.Difficulty).Count() == Enum.GetValues<MDifficulty>().Length
+                );
             if (!pass)
             {
                 LogExclusion(song, "Not full spread");
