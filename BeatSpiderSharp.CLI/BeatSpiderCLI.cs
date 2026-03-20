@@ -117,9 +117,13 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
         }
 
         Log.Information("Loading songs from cached data");
-        using var songDataStream = new StreamReader(new GZipStream(File.OpenRead(options.SongCachePath),
-            CompressionMode.Decompress));
-        var jsonReader = new JsonTextReader(songDataStream);
+        Stream songDataStream = File.OpenRead(options.SongCachePath);
+        if (options.GZipCacheData)
+        {
+            songDataStream = new GZipStream(songDataStream, CompressionMode.Decompress);
+        }
+
+        await using var jsonReader = new JsonTextReader(new StreamReader(songDataStream));
         var serializer = JsonSerializer.Create(new JsonSerializerSettings
         {
             Formatting = Formatting.Indented,

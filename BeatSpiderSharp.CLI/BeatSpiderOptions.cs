@@ -6,6 +6,8 @@ public record BeatSpiderOptions
 
     public required string SongCachePath { get; init; }
 
+    public bool GZipCacheData { get; init; }
+
     public string? OutputPlaylist { get; init; }
 
     public string? OutputSongPath { get; init; }
