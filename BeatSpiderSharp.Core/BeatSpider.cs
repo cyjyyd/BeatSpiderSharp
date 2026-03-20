@@ -5,7 +5,7 @@ using Serilog;
 
 namespace BeatSpiderSharp.Core;
 
-public abstract class BeatSpider
+public abstract class BeatSpider : IDisposable
 {
     protected SpecialFolders SpecialFolders { get; } = new();
 
@@ -26,6 +26,12 @@ public abstract class BeatSpider
 
     protected virtual void ConfigureLogger(LoggerConfiguration configuration)
     {
+    }
+
+    void IDisposable.Dispose()
+    {
+        SpecialFolders.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     protected async Task<IEnumerable<BeatSpiderSong>?> FilterSongsAsync(IEnumerable<BeatSpiderSong> songs, Preset preset)

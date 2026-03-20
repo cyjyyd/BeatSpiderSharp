@@ -100,6 +100,8 @@ internal class BeatSpiderRunner : RunnerBase
             Verbose = parseResult.GetRequiredValue(_verbose)
         };
 
-        return await new BeatSpiderCLI(options.Verbose).Run(options);
+        using var beatSpider = new BeatSpiderCLI(options.Verbose);
+
+        return await beatSpider.Run(options);
     }
 }
