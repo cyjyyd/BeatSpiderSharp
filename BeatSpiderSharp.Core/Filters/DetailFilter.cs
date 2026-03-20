@@ -62,7 +62,7 @@ public class DetailFilter: ISongFilter
             return false;
         }
 
-        if (filter.UpVotePercentage &&
+        if (filter.UpVotePercentage && stats?.Upvotes + stats?.Downvotes > 0 &&
             !filter.UpVotePercentage.InRange(stats?.Upvotes * 100f / (stats?.Upvotes + stats?.Downvotes)))
         {
             LogExclusion(song, "Up vote percentage not in range");
@@ -75,7 +75,7 @@ public class DetailFilter: ISongFilter
             return false;
         }
 
-        if (filter.DownVotePercentage &&
+        if (filter.DownVotePercentage && stats?.Upvotes + stats?.Downvotes > 0 &&
             !filter.DownVotePercentage.InRange(stats?.Downvotes * 100f / (stats?.Upvotes + stats?.Downvotes)))
         {
             LogExclusion(song, "Down vote percentage not in range");
