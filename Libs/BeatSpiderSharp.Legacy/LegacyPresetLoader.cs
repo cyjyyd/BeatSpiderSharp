@@ -21,19 +21,33 @@ public static class LegacyPresetLoader
 #endif
     });
 
-    public static LegacyPreset? LoadLegacyPreset(string path)
+    public static Preset? LoadAndConvertLegacyPreset(string path, string author)
+    {
+        var legacy = LoadLegacyPreset(path);
+        if (legacy is null)
+        {
+            return null;
+        }
+#if DEBUG
+        SaveLegacyPreset(legacy, $"{path}.legacy.saved.json");
+#endif
+        var preset = ConvertToPreset(legacy, Path.GetFileNameWithoutExtension(path), author);
+        return preset;
+    }
+
+    internal static LegacyPreset? LoadLegacyPreset(string path)
     {
         Log.Information("Loading legacy preset from {Path}", path);
         return LegacySerializer.DeserializeObject<LegacyPreset>(path);
     }
 
-    public static void SaveLegacyPreset(LegacyPreset preset, string path)
+    internal static void SaveLegacyPreset(LegacyPreset preset, string path)
     {
         Log.Information("Writing legacy preset to {Path}", path);
         LegacySerializer.Serialize(preset, path);
     }
 
-    public static Preset ConvertToPreset(this LegacyPreset legacyPreset, string fileName, string author)
+    internal static Preset ConvertToPreset(LegacyPreset legacyPreset, string fileName, string author)
     {
         Log.Information("Converting legacy preset to new preset: {Name}", fileName);
         WarnUnsupported(legacyPreset);
@@ -385,14 +399,14 @@ public static class LegacyPresetLoader
             IncludeCharacteristics = new()
             {
                 Enable = setting.IncludeCharacteristics.Enable,
-                Filter = setting.IncludeCharacteristics.Characteristics.Select(LegacyExtensions.ToMCharacteristic)
+                Filter = setting.IncludeCharacteristics.Characteristics.Select(EnumConversions.ToMCharacteristic)
                     .ToHashSet(),
                 IsOr = true
             },
             IncludeDifficulties = new()
             {
                 Enable = setting.IncludeDifficulties.Enable,
-                Filter = setting.IncludeDifficulties.Difficulties.Select(LegacyExtensions.ToMDifficulty).ToHashSet(),
+                Filter = setting.IncludeDifficulties.Difficulties.Select(EnumConversions.ToMDifficulty).ToHashSet(),
                 IsOr = !setting.IncludeDifficulties.And
             },
             RequireMods = new()

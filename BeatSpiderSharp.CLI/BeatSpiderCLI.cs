@@ -46,19 +46,17 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
 
         if (options.InputIsLegacy)
         {
-            var legacy = LegacyPresetLoader.LoadLegacyPreset(options.InputPreset);
+            // allow empty author
+            var author = options.PresetAuthor ?? Environment.UserName;
 
-            if (legacy == null)
+            var p = LegacyPresetLoader.LoadAndConvertLegacyPreset(options.InputPreset, author);
+            if (p == null)
             {
-                Log.Warning("Failed to load preset");
+                Log.Error("Failed to load preset");
                 return -1;
             }
 
-            // LegacyPresetLoader.SaveLegacyPreset(preset, "./output.json");
-            // allow empty author
-            var author = options.PresetAuthor ?? Environment.UserName;
-            preset = legacy.ConvertToPreset(Path.GetFileNameWithoutExtension(options.InputPreset), author);
-
+            preset = p;
             if (!string.IsNullOrWhiteSpace(options.SaveConvertedPresetPath))
             {
                 Log.Information("Saving converted preset");
@@ -85,7 +83,7 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
 
             if (p == null)
             {
-                Log.Warning("Failed to load preset");
+                Log.Error("Failed to load preset");
                 return -1;
             }
 

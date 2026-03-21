@@ -2,7 +2,7 @@
 
 namespace BeatSpiderSharp.Legacy;
 
-public static class LegacyExtensions
+internal static class EnumConversions
 {
     public static ISet<MMod> ToMMods(this LegacyPreset.ModRequirements req)
     {

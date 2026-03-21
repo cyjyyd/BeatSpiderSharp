@@ -6,7 +6,7 @@ namespace BeatSpiderSharp.Legacy;
 /// <summary>
 /// The preset model for BeatSpider, aka a .brset preset file.
 /// </summary>
-public class LegacyPreset
+internal class LegacyPreset
 {
     [JsonProperty("下载方式选择")]
     public DataSource SongSource { get; private set; }
