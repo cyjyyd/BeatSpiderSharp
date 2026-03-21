@@ -1,13 +1,13 @@
 ﻿using System.IO.Compression;
 using BeatSpiderSharp.Core;
-using BeatSpiderSharp.Core.Legacy;
-using BeatSpiderSharp.Core.Models;
-using BeatSpiderSharp.Core.Models.BeatSaver;
-using BeatSpiderSharp.Core.Models.Preset;
-using BeatSpiderSharp.Core.Models.Preset.Enums;
 using BeatSpiderSharp.Core.SongSource;
 using BeatSpiderSharp.Core.Utilities;
-using BeatSpiderSharp.Core.Utilities.Extensions;
+using BeatSpiderSharp.Extensions;
+using BeatSpiderSharp.Legacy;
+using BeatSpiderSharp.Models;
+using BeatSpiderSharp.Models.BeatSaver;
+using BeatSpiderSharp.Models.Enums;
+using BeatSpiderSharp.Models.Preset;
 using Newtonsoft.Json;
 using Serilog;
 
