@@ -102,18 +102,19 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
         GC.Collect();
 
         var stopwatch = new Stopwatch();
-        var tasks = new Task<JArray?>[ConcurrentRequests];
+        var tasks = new List<Task<JArray?>>(ConcurrentRequests);
         for (var basePage = 0; basePage < totalPages; basePage += ConcurrentRequests)
         {
             stopwatch.Reset();
             stopwatch.Start();
+            tasks.Clear();
             var endPage = 0;
             try
             {
                 for (var offset = 0; offset < ConcurrentRequests && basePage + offset < totalPages; offset++)
                 {
                     var page = basePage + offset;
-                    tasks[offset] = Task.Run(() => CrawlPageAsync(page, cToken), cToken);
+                    tasks.Add(Task.Run(() => CrawlPageAsync(page, cToken), cToken));
                     endPage = page;
                 }
 
