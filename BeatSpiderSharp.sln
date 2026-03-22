@@ -3,12 +3,24 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.8.34408.163
 MinimumVisualStudioVersion = 10.0.40219.1
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeatSpiderSharp.Core", "BeatSpiderSharp.Core\BeatSpiderSharp.Core.csproj", "{BA3C604C-5262-4BB9-ADC2-BEBD504B05A4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeatSpiderSharp.Core", "Libs\BeatSpiderSharp.Core\BeatSpiderSharp.Core.csproj", "{BA3C604C-5262-4BB9-ADC2-BEBD504B05A4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeatSpiderSharp.CLI", "BeatSpiderSharp.CLI\BeatSpiderSharp.CLI.csproj", "{9009CD19-9653-4EE1-A0F3-CED63B6B4AF0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeatSpiderSharp.Cacher", "BeatSpiderSharp.Cacher\BeatSpiderSharp.Cacher.csproj", "{392A4B16-6A87-4B6A-975C-64932140CBBF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
+	ProjectSection(SolutionItems) = preProject
+		Directory.Build.props = Directory.Build.props
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeatSpiderSharp.Models", "Libs\BeatSpiderSharp.Models\BeatSpiderSharp.Models.csproj", "{96517A2F-F762-4265-8DC4-79DA075FC692}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeatSpiderSharp.Legacy", "Libs\BeatSpiderSharp.Legacy\BeatSpiderSharp.Legacy.csproj", "{3266A730-3E5E-46F1-8A9F-7794F3571918}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeatSpiderSharp.Extensions", "Libs\BeatSpiderSharp.Extensions\BeatSpiderSharp.Extensions.csproj", "{D8D21C9D-E22B-40A2-9EAB-C89BBED4A299}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libs", "Libs", "{C43F29B2-ADF8-4232-9254-DDF6550B2B7D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -28,11 +40,29 @@ Global
 		{392A4B16-6A87-4B6A-975C-64932140CBBF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{392A4B16-6A87-4B6A-975C-64932140CBBF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{392A4B16-6A87-4B6A-975C-64932140CBBF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{96517A2F-F762-4265-8DC4-79DA075FC692}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{96517A2F-F762-4265-8DC4-79DA075FC692}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{96517A2F-F762-4265-8DC4-79DA075FC692}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{96517A2F-F762-4265-8DC4-79DA075FC692}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3266A730-3E5E-46F1-8A9F-7794F3571918}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3266A730-3E5E-46F1-8A9F-7794F3571918}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3266A730-3E5E-46F1-8A9F-7794F3571918}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3266A730-3E5E-46F1-8A9F-7794F3571918}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D8D21C9D-E22B-40A2-9EAB-C89BBED4A299}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D8D21C9D-E22B-40A2-9EAB-C89BBED4A299}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D8D21C9D-E22B-40A2-9EAB-C89BBED4A299}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D8D21C9D-E22B-40A2-9EAB-C89BBED4A299}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D1F802DE-6C43-4C07-93E0-FCB344BBAB04}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{BA3C604C-5262-4BB9-ADC2-BEBD504B05A4} = {C43F29B2-ADF8-4232-9254-DDF6550B2B7D}
+		{D8D21C9D-E22B-40A2-9EAB-C89BBED4A299} = {C43F29B2-ADF8-4232-9254-DDF6550B2B7D}
+		{3266A730-3E5E-46F1-8A9F-7794F3571918} = {C43F29B2-ADF8-4232-9254-DDF6550B2B7D}
+		{96517A2F-F762-4265-8DC4-79DA075FC692} = {C43F29B2-ADF8-4232-9254-DDF6550B2B7D}
 	EndGlobalSection
 EndGlobal
