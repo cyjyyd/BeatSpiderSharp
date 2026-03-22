@@ -218,21 +218,19 @@ public static class LegacyPresetLoader
 
     private static void CombineRange<T>(RangeOption<T> o, LegacyPreset.IMinMaxSetting<T> s) where T : struct, IComparable<T>
     {
-        var min = s.Min;
-        var max = s.Max;
         var min1 = o.Min;
-        var max1 = o.Min;
+        var max1 = o.Max;
         var min2 = s.Min;
         var max2 = s.Max;
         if (o.Enable)
         {
-            min = min1.HasValue && min2.HasValue ? min1.Value.CompareTo(min2.Value) > 0 ? min1 : min2 : min1 ?? min2;
-            max = max1.HasValue && max2.HasValue ? max1.Value.CompareTo(max2.Value) < 0 ? max1 : max2 : max1 ?? max2;
+            min1 = min1.HasValue && min2.HasValue ? min1.Value.CompareTo(min2.Value) > 0 ? min1 : min2 : min1 ?? min2;
+            max1 = max1.HasValue && max2.HasValue ? max1.Value.CompareTo(max2.Value) < 0 ? max1 : max2 : max1 ?? max2;
         }
 
         o.Enable = true;
-        o.Min = min;
-        o.Max = max;
+        o.Min = min1;
+        o.Max = max1;
     }
 
     private static void MergeBeatSaverSetting(DetailOptions options, LegacyPreset.BeatSaverSetting setting)
