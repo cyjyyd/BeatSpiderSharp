@@ -7,13 +7,13 @@ public static class EnumConversions
 {
     public static HashSet<MMod> GetMMods(this Diff diff)
     {
-        //TODO Vivify
         return Enum.GetValues<MMod>().Where(mod => mod switch
         {
             MMod.NoodleExtensions => diff.Ne,
             MMod.MappingExtensions => diff.Me,
             MMod.Chroma => diff.Chroma,
             MMod.Cinema => diff.Cinema,
+            MMod.Vivify => diff.Vivify,
             _ => false
         }).ToHashSet();
     }
