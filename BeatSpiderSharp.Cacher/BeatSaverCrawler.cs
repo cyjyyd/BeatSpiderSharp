@@ -208,7 +208,6 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
         {
             var ex = new Exception($"第 {page + 1} 页数据错误， 'docs' 不是一个数组");
             progress?.Report(new ProgressReport { Error = ex });
-            if (ExitOnError) throw ex;
             return ExitOnError ? throw ex : null;
         }
 
