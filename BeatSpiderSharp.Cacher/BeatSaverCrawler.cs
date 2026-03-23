@@ -184,7 +184,7 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
 
     private async Task<int> GetTotalPagesAsync()
     {
-        var response = await _client.GetStringAsync($"{ApiUrl}0?pageSize={PageSize}");
+        var response = await _client.GetStringAsync($"{ApiUrl}0?pageSize=1");
         var doc = JObject.Parse(response);
         return (int)Math.Ceiling(doc["info"]!["total"]!.ToObject<double>() / PageSize);
     }
