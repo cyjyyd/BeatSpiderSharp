@@ -29,7 +29,7 @@ public static class LegacyPresetLoader
             return null;
         }
 #if DEBUG
-        SaveLegacyPreset(legacy, $"{path}.legacy.saved.json");
+        SaveLegacyPreset(legacy, $"./{Path.GetFileName(path)}.legacy.saved.json");
 #endif
         var preset = ConvertToPreset(legacy, Path.GetFileNameWithoutExtension(path), author);
         return preset;
