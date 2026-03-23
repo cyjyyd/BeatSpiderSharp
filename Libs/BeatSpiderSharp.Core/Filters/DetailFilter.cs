@@ -93,7 +93,7 @@ public class DetailFilter: ISongFilter
         {
             var pass = diffs
                 .GroupBy(diff => diff.GetMCharacteristic())
-                .Where(group => group.Key is not (null or MCharacteristic.Lightshow or MCharacteristic.Other))
+                .Where(group => group.Key is not (null or MCharacteristic.Lightshow))
                 .Any(group =>
                     group.DistinctBy(diff => diff.Difficulty).Count() == Enum.GetValues<MDifficulty>().Length
                 );

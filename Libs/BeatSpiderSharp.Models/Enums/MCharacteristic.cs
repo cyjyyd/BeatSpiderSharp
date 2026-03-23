@@ -1,6 +1,5 @@
 ﻿namespace BeatSpiderSharp.Models.Enums;
 
-//TODO support Legacy
 public enum MCharacteristic
 {
     Standard,
@@ -10,5 +9,5 @@ public enum MCharacteristic
     ThreeSixtyDegree,
     Lightshow,
     Lawless,
-    Other
+    Legacy
 }

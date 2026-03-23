@@ -402,12 +402,13 @@ internal class LegacyPreset
                 NinetyDegree,
                 ThreeSixtyDegree,
                 Lightshow,
-                Lawless
+                Lawless,
+                Legacy
             }
 
             private class CharacteristicsEnumConverter : EnumArrayConverter<SongCharacteristic>
             {
-                // Standard,OneSaber,NoArrows,90Degree,360Degree,Lightshow,Lawless
+                // Standard,OneSaber,NoArrows,90Degree,360Degree,Lightshow,Lawless,Legacy
                 protected override SongCharacteristic ParseEnumFromString(string value)
                 {
                     return value switch
@@ -419,7 +420,8 @@ internal class LegacyPreset
                         "360Degree" => SongCharacteristic.ThreeSixtyDegree,
                         "Lightshow" => SongCharacteristic.Lightshow,
                         "Lawless" => SongCharacteristic.Lawless,
-                        _ => throw new JsonException($"Unknown song characteristic {value}")
+                        "Legacy" => SongCharacteristic.Legacy,
+                        _ => throw new ArgumentException($"Unknown song characteristic {value}")
                     };
                 }
 
@@ -434,7 +436,8 @@ internal class LegacyPreset
                         SongCharacteristic.ThreeSixtyDegree => "360Degree",
                         SongCharacteristic.Lightshow => "Lightshow",
                         SongCharacteristic.Lawless => "Lawless",
-                        _ => throw new JsonException($"Invalid song characteristic {value}")
+                        SongCharacteristic.Legacy => "Legacy",
+                        _ => throw new ArgumentException($"Invalid song characteristic {value}")
                     };
                 }
             }

@@ -27,7 +27,11 @@ public static class EnumConversions
             "Hard" => MDifficulty.Hard,
             "Expert" => MDifficulty.Expert,
             "ExpertPlus" => MDifficulty.ExpertPlus,
+#if DEBUG
+            _ => throw new Exception($"Unknown difficulty: {diff.Characteristic}")
+#else
             _ => null
+#endif
         };
     }
 
@@ -42,8 +46,12 @@ public static class EnumConversions
             "360Degree" => MCharacteristic.ThreeSixtyDegree,
             "Lawless" => MCharacteristic.Lawless,
             "Lightshow" => MCharacteristic.Lightshow,
-            "Legacy" => MCharacteristic.Other, // TODO
-            _ => MCharacteristic.Other
+            "Legacy" => MCharacteristic.Legacy,
+#if DEBUG
+            _ => throw new Exception($"Unknown characteristic: {diff.Characteristic}")
+#else
+            _ => null
+#endif
         };
     }
 }

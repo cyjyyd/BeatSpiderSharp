@@ -2,6 +2,7 @@
 
 namespace BeatSpiderSharp.Legacy;
 
+//TODO use strings in the preset and remove extra enums 
 internal static class EnumConversions
 {
     public static ISet<MMod> ToMMods(this LegacyPreset.ModRequirements req)
@@ -25,7 +26,7 @@ internal static class EnumConversions
             LegacyPreset.SongFilterSetting.CharacteristicsFilter.SongCharacteristic.ThreeSixtyDegree => MCharacteristic.ThreeSixtyDegree,
             LegacyPreset.SongFilterSetting.CharacteristicsFilter.SongCharacteristic.Lightshow => MCharacteristic.Lightshow,
             LegacyPreset.SongFilterSetting.CharacteristicsFilter.SongCharacteristic.Lawless => MCharacteristic.Lawless,
-            _ => MCharacteristic.Other
+            _ => throw new ArgumentOutOfRangeException(nameof(characteristic), characteristic, "Invalid characteristic")
         };
     }
 
@@ -38,7 +39,7 @@ internal static class EnumConversions
             LegacyPreset.SongFilterSetting.DifficultyFilter.Difficulty.Hard => MDifficulty.Hard,
             LegacyPreset.SongFilterSetting.DifficultyFilter.Difficulty.Expert => MDifficulty.Expert,
             LegacyPreset.SongFilterSetting.DifficultyFilter.Difficulty.ExpertPlus => MDifficulty.ExpertPlus,
-            _ => MDifficulty.ExpertPlus
+            _ => throw new ArgumentOutOfRangeException(nameof(difficulty), difficulty, "Invalid  difficulty")
         };
     }
 }
