@@ -51,7 +51,7 @@ public class DetailFilter: ISongFilter
             return false;
         }
 
-        if (filter.ExcludeTags && filter.ExcludeTags.Filter.Intersect(map.Tags).Any())
+        if (filter.ExcludeTags && !filter.ExcludeTags.SatisfiedBy(map.Tags))
         {
             LogExclusion(song, "Excluded tags found");
             return false;
@@ -136,8 +136,7 @@ public class DetailFilter: ISongFilter
         
         if (filter.ExcludeMods)
         {
-            var excluded = filter.ExcludeMods.Filter;
-            if (diffs.All(diff => excluded.Any(diff.GetMMods().Contains)))
+            if (diffs.All(diff => !filter.ExcludeMods.SatisfiedBy(diff.GetMMods())))
             {
                 LogExclusion(song, "All difficulties contain excluded mods");
                 return false;

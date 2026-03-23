@@ -33,6 +33,16 @@ public class LogicIncludeOption<T>() : Option<ISet<T>>(new HashSet<T>())
     {
         var required = Filter;
         if (required.Count == 0) return true; // vacuously true
-        return IsOr ? required.Any(values.Contains) : required.All(values.Contains);
+        return IsOr ? required.Overlaps(values) : required.IsSubsetOf(values);
+    }
+}
+
+public class ExcludeOption<T>() : Option<ISet<T>>(new HashSet<T>())
+{
+    public bool SatisfiedBy(ICollection<T> values)
+    {
+        var excluded = Filter;
+        if (excluded.Count == 0) return true; // excluding nothing
+        return !excluded.Overlaps(values);
     }
 }

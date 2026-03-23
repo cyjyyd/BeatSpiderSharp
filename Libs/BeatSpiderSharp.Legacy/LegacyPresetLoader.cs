@@ -303,7 +303,7 @@ public static class LegacyPresetLoader
         {
             options.ExcludeMods.Enable = true;
             options.ExcludeMods.Filter = options.ExcludeMods.Filter
-                .Concat(setting.ExcludeMods.ExcludeMods.ToMMods()).Distinct().ToHashSet();
+                .Concat(setting.ExcludeMods.ExcludeMods.ToMMods()).ToHashSet();
         }
     }
 
@@ -360,9 +360,10 @@ public static class LegacyPresetLoader
                 Filter = setting.Tags.Include.Content.ToHashSet(),
                 IsOr = !setting.Tags.Include.And
             },
-            ExcludeTags = new(setting.Tags.Exclude.Content.ToHashSet())
+            ExcludeTags =
             {
-                Enable = setting.Tags.Exclude.Enable
+                Enable = setting.Tags.Exclude.Enable,
+                Filter = setting.Tags.Exclude.Content.ToHashSet()
             },
             UpVotes = new()
             {
@@ -413,9 +414,10 @@ public static class LegacyPresetLoader
                 Filter = setting.RequireMods.Mods.ToMMods().ToHashSet(),
                 IsOr = true
             },
-            ExcludeMods = new(setting.ExcludeMods.Mods.ToMMods())
+            ExcludeMods =
             {
-                Enable = setting.ExcludeMods.Enable
+                Enable = setting.ExcludeMods.Enable,
+                Filter = setting.ExcludeMods.Mods.ToMMods()
             },
             Bpm = new()
             {
