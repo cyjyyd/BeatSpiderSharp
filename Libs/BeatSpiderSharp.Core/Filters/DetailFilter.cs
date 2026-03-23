@@ -25,17 +25,16 @@ public class DetailFilter: ISongFilter
         var diffs = latest.Diffs;
         var stats = map.Stats;
 
-        if (filter.UploaderId && filter.UploaderId.Filter != null &&
-            map.Uploader?.Id != filter.UploaderId.Filter.Value)
+        if (filter.UploaderId && (map.Uploader == null || !filter.UploaderId.SatisfiedBy(map.Uploader.Id)))
         {
-            LogExclusion(song, "Uploader id doesn't match");
+            LogExclusion(song, "Required uploader id not found");
             return false;
         }
 
-        if (filter.UploaderName && !string.IsNullOrWhiteSpace(filter.UploaderName.Filter) &&
-            !filter.UploaderName.Filter.Equals(map.Uploader?.Name, StringComparison.InvariantCultureIgnoreCase))
+        if (filter.UploaderName && (string.IsNullOrEmpty(map.Uploader?.Name) ||
+                                    !filter.UploaderName.SatisfiedBy(map.Uploader.Name)))
         {
-            LogExclusion(song, "Uploader name doesn't match");
+            LogExclusion(song, "Required uploader name not found");
             return false;
         }
 
@@ -185,38 +184,16 @@ public class DetailFilter: ISongFilter
             return false;
         }
 
-        if (filter.ScoreSaberRanking)
+        if (filter.ScoreSaberRanking && !filter.ScoreSaberRanking.SatisfiedBy(map.RankingStatus))
         {
-            var pass = filter.ScoreSaberRanking.Filter.Any(status => status switch 
-            {
-                RankingStatus.Unranked => map is { Ranked: false, Qualified: false },
-                RankingStatus.Ranked => map.Ranked,
-                RankingStatus.Qualified => map.Qualified,
-                _ => false
-            });
-
-            if (!pass)
-            {
-                LogExclusion(song, "Required ScoreSaber ranking status not found");
-                return false;
-            }
+            LogExclusion(song, "Required ScoreSaber ranking status not found");
+            return false;
         }
 
-        if (filter.BeatLeaderRanking)
+        if (filter.BeatLeaderRanking && filter.BeatLeaderRanking.SatisfiedBy(map.BlRankingStatus))
         {
-            var pass = filter.BeatLeaderRanking.Filter.Any(status => status switch 
-            {
-                RankingStatus.Unranked => map is { BlRanked: false, BlQualified: false },
-                RankingStatus.Ranked => map.BlRanked,
-                RankingStatus.Qualified => map.BlQualified,
-                _ => false
-            });
-
-            if (!pass)
-            {
-                LogExclusion(song, "Required BeatLeader ranking status not found");
-                return false;
-            }
+            LogExclusion(song, "Required BeatLeader ranking status not found");
+            return false;
         }
 
         if (filter.ScoreSaberStars)

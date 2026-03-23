@@ -10,10 +10,10 @@ public class Option
     public static implicit operator bool(Option option) => option.Enable;
 }
 
-public class Option<T>(T defaultValue) : Option
+public class Option<T>(T initialValue) : Option
 {
     [JsonProperty(Order = -89)]
-    public T Filter { get; set; } = defaultValue;
+    public T Filter { get; set; } = initialValue;
 }
 
 public class RangeOption<T> : Option where T : struct, IComparable<T>
@@ -25,7 +25,10 @@ public class RangeOption<T> : Option where T : struct, IComparable<T>
                                      (!Max.HasValue || value.Value.CompareTo(Max.Value) <= 0);
 }
 
-public class LogicIncludeOption<T>() : Option<ISet<T>>(new HashSet<T>())
+public abstract class ValueSetOption<T>(IEqualityComparer<T>? comparer = null)
+    : Option<ISet<T>>(new HashSet<T>(comparer));
+
+public class LogicIncludeOption<T>(IEqualityComparer<T>? comparer = null) : ValueSetOption<T>(comparer)
 {
     public bool IsOr { get; set; }
 
@@ -37,7 +40,15 @@ public class LogicIncludeOption<T>() : Option<ISet<T>>(new HashSet<T>())
     }
 }
 
-public class ExcludeOption<T>() : Option<ISet<T>>(new HashSet<T>())
+/**
+ * Use to test at least one of the required values is present
+ */
+public class IncludeOption<T>(IEqualityComparer<T>? comparer = null) : ValueSetOption<T>(comparer)
+{
+    public bool SatisfiedBy(T value) => Filter.Count == 0 || Filter.Contains(value);
+}
+
+public class ExcludeOption<T>(IEqualityComparer<T>? comparer = null) : ValueSetOption<T>(comparer)
 {
     public bool SatisfiedBy(ICollection<T> values)
     {

@@ -320,15 +320,17 @@ public static class LegacyPresetLoader
         var url = setting.MapperAddress;
         Log.Debug("Extracting uploader id from mapper url: {Url}", url);
         var match = MapperUrlRegex.Match(url);
-        if (match.Success && match.Groups.Count == 2 && int.TryParse(match.Groups[1].Value, out var id))
+        if (match is { Success: true, Groups.Count: 2 } && int.TryParse(match.Groups[1].Value, out var id))
         {
-            if (options.UploaderId.Enable && options.UploaderId.Filter.HasValue)
+            Log.Information("Found uploader id from mapper url: {Url}", url);
+            if (options.UploaderId.Enable && !options.UploaderId.Filter.Contains(id))
             {
                 Log.Warning("Overwriting existing UploaderID filter to {New}", id);
             }
 
             options.UploaderId.Enable = true;
-            options.UploaderId.Filter = id;
+            options.UploaderId.Filter.Clear();
+            options.UploaderId.Filter.Add(id);
         }
         else
         {
@@ -340,13 +342,15 @@ public static class LegacyPresetLoader
     {
         return new DetailOptions
         {
-            UploaderId = new(int.TryParse(setting.UploaderId.Content, out var id) ? id : null)
+            UploaderId =
             {
-                Enable = setting.UploaderId.Enable
+                Enable = setting.UploaderIds.Enable,
+                Filter = setting.UploaderIds.Content.ToHashSet()
             },
-            UploaderName = new(setting.UploaderName.Content)
+            UploaderName =
             {
-                Enable = setting.UploaderName.Enable
+                Enable = setting.UploaderNames.Enable,
+                Filter = setting.UploaderNames.Content.ToHashSet()
             },
             UploadTime = new()
             {
@@ -461,11 +465,12 @@ public static class LegacyPresetLoader
                 Min = setting.Walls.Min,
                 Max = setting.Walls.Max
             },
-            ScoreSaberRanking = new(setting.RankedSong.IsRanked
-                ? new HashSet<RankingStatus> { RankingStatus.Ranked }
-                : new HashSet<RankingStatus> { RankingStatus.Unranked, RankingStatus.Qualified })
+            ScoreSaberRanking =
             {
-                Enable = setting.RankedSong.Enable
+                Enable = setting.RankedSong.Enable,
+                Filter = setting.RankedSong.IsRanked
+                    ? new HashSet<RankingStatus> { RankingStatus.Ranked }
+                    : new HashSet<RankingStatus> { RankingStatus.Unranked, RankingStatus.Qualified }
             },
             ScoreSaberStars = new()
             {

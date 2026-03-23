@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using BeatSpiderSharp.Models.Enums;
+using Newtonsoft.Json;
 
 namespace BeatSpiderSharp.Models.BeatSaver;
 
@@ -34,6 +35,16 @@ public record Song
     [JsonProperty("qualified")]
     public bool Qualified { get; init; }
 
+    public RankingStatus RankingStatus
+    {
+        get
+        {
+            if (Ranked) return RankingStatus.Ranked;
+            if (Qualified) return RankingStatus.Qualified;
+            return RankingStatus.Unranked;
+        }
+    }
+
     [JsonProperty("versions")]
     public List<SongVersion> Versions { get; init; } = [];
 
@@ -65,6 +76,16 @@ public record Song
 
     [JsonProperty("blQualified")]
     public bool BlQualified { get; init; }
+
+    public RankingStatus BlRankingStatus
+    {
+        get
+        {
+            if (BlRanked) return RankingStatus.Ranked;
+            if (BlQualified) return RankingStatus.Qualified;
+            return RankingStatus.Unranked;
+        }
+    }
 
     [JsonProperty("bookmarked")]
     public bool Bookmarked { get; init; }

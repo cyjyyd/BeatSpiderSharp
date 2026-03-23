@@ -5,8 +5,8 @@ namespace BeatSpiderSharp.Models.Preset.FilterOptions;
 //TODO separate song and individual difficulty filters
 public class DetailOptions
 {
-    public Option<int?> UploaderId { get; set; } = new(null);
-    public Option<string> UploaderName { get; set; } = new(string.Empty);
+    public IncludeOption<int> UploaderId { get; set; } = new();
+    public IncludeOption<string> UploaderName { get; set; } = new(StringComparer.InvariantCultureIgnoreCase);
     public RangeOption<DateTimeOffset> UploadTime { get; set; } = new();
     public LogicIncludeOption<string> IncludeTags { get; set; } = new();
     public ExcludeOption<string> ExcludeTags { get; set; } = new();
@@ -27,8 +27,8 @@ public class DetailOptions
     public RangeOption<int> Notes { get; set; } = new();
     public RangeOption<int> Bombs { get; set; } = new();
     public RangeOption<int> Walls { get; set; } = new();
-    public Option<ISet<RankingStatus>> ScoreSaberRanking { get; set; } = new(new HashSet<RankingStatus>());
-    public Option<ISet<RankingStatus>> BeatLeaderRanking { get; set; } = new(new HashSet<RankingStatus>());
+    public IncludeOption<RankingStatus> ScoreSaberRanking { get; set; } = new();
+    public IncludeOption<RankingStatus> BeatLeaderRanking { get; set; } = new();
     public RangeOption<float> ScoreSaberStars { get; set; } = new();
     public RangeOption<float> BeatLeaderStars { get; set; } = new();
     public Option Chinese { get; set; } = new();

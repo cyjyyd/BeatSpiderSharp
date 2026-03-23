@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using JetBrains.Annotations;
 using Newtonsoft.Json;
 
 namespace BeatSpiderSharp.Legacy;
@@ -187,7 +188,7 @@ internal class LegacyPreset
     {
         [JsonProperty("手动下载歌曲")]
         [JsonConverter(typeof(StringMultiLineArrayConverter))]
-        public IList<string> Songs { get; private set; } = new List<string>();
+        public IList<string> Songs { get; private set; } = [];
     }
 
     public class SearchFilterSetting
@@ -224,11 +225,11 @@ internal class LegacyPreset
     {
         [JsonProperty("目录")]
         [JsonConverter(typeof(StringMultiLineArrayConverter))]
-        public IList<string> LocalSongPaths { get; private set; } = new List<string>();
+        public IList<string> LocalSongPaths { get; private set; } = [];
 
         [JsonProperty("跳过")]
         [JsonConverter(typeof(StringMultiLineArrayConverter))]
-        public IList<string> LocalSongSkipPaths { get; private set; } = new List<string>();
+        public IList<string> LocalSongSkipPaths { get; private set; } = [];
 
         /// <summary>
         /// It was only used to determine which tab to display in the original project.
@@ -275,10 +276,10 @@ internal class LegacyPreset
     public class SongFilterSetting
     {
         [JsonProperty("上传者ID")]
-        public ContentSetting UploaderId { get; private set; } = new();
+        public ContentIntArraySetting UploaderIds { get; private set; } = new();
 
         [JsonProperty("上传者名称")]
-        public ContentSetting UploaderName { get; private set; } = new();
+        public ContentArraySetting UploaderNames { get; private set; } = new();
 
         [JsonProperty("需求组件")]
         public ModsFilter RequireMods { get; private set; } = new();
@@ -392,7 +393,7 @@ internal class LegacyPreset
         {
             [JsonProperty("内容")]
             [JsonConverter(typeof(CharacteristicsEnumConverter))]
-            public IList<SongCharacteristic> Characteristics { get; private set; } = new List<SongCharacteristic>();
+            public IList<SongCharacteristic> Characteristics { get; private set; } = [];
 
             public enum SongCharacteristic
             {
@@ -447,7 +448,7 @@ internal class LegacyPreset
         {
             [JsonProperty("内容")]
             [JsonConverter(typeof(EnumArrayConverter<Difficulty>))]
-            public IList<Difficulty> Difficulties { get; private set; } = new List<Difficulty>();
+            public IList<Difficulty> Difficulties { get; private set; } = [];
             
             [JsonProperty("与")]
             public bool And { get; private set; }
@@ -503,7 +504,7 @@ internal class LegacyPreset
         public DisablableSetting WaitForToken { get; private set; } = new();
 
         [JsonProperty("封面包含")]
-        public ContentSetting IncludeTags { get; private set; } = new();
+        public ContentTag IncludeTags { get; private set; } = new();
 
         [JsonProperty("封面包含与")]
         public DisablableSetting IncludeAnd { get; private set; } = new();
@@ -512,7 +513,7 @@ internal class LegacyPreset
         public DisablableSetting IncludeOr { get; private set; } = new();
 
         [JsonProperty("封面排除")]
-        public ContentSetting ExcludeTags { get; private set; } = new();
+        public ContentTag ExcludeTags { get; private set; } = new();
 
         [JsonProperty("封面排除与")]
         public DisablableSetting ExcludeAnd { get; private set; } = new();
@@ -531,6 +532,13 @@ internal class LegacyPreset
             [JsonProperty("内容")]
             [JsonConverter(typeof(StringIntConverter))]
             public int? Content { get; private set; }
+        }
+
+        public class ContentTag : DisablableSetting
+        {
+            [JsonProperty("内容")]
+            [JsonConverter(typeof(StringArrayConverter), false)]
+            public IList<string> Content { get; private set; } = [];
         }
     }
 
@@ -554,7 +562,14 @@ internal class LegacyPreset
     {
         [JsonProperty("内容", Order = -89)]
         [JsonConverter(typeof(StringArrayConverter))]
-        public IList<string> Content { get; private set; } = new List<string>();
+        public IList<string> Content { get; private set; } = [];
+    }
+
+    public class ContentIntArraySetting : DisablableSetting
+    {
+        [JsonProperty("内容", Order = -89)]
+        [JsonConverter(typeof(IntArrayConverter))]
+        public IList<int> Content { get; private set; } = [];
     }
 
     public class ContentIntSetting : DisablableSetting
@@ -579,11 +594,6 @@ internal class LegacyPreset
         [JsonProperty("max")]
         [JsonConverter(typeof(StringIntConverter))]
         public int? Max { get; private set; }
-        
-        public bool InRange(int value)
-        {
-            return (!Min.HasValue || value >= Min.Value) && (!Max.HasValue || value <= Max.Value);
-        }
     }
 
     public class MinMaxFloatSetting : DisablableSetting, IMinMaxSetting<float>
@@ -595,11 +605,6 @@ internal class LegacyPreset
         [JsonProperty("max")]
         [JsonConverter(typeof(StringFloatConverter))]
         public float? Max { get; private set; }
-        
-        public bool InRange(float value)
-        {
-            return (!Min.HasValue || value >= Min.Value) && (!Max.HasValue || value <= Max.Value);
-        }
     }
 
     public class MinMaxTimeSetting : DisablableSetting, IMinMaxSetting<DateTimeOffset>
@@ -611,11 +616,6 @@ internal class LegacyPreset
         [JsonProperty("max")]
         [JsonConverter(typeof(StringTimestampConverter))]
         public DateTimeOffset? Max { get; private set; }
-        
-        public bool InRange(DateTimeOffset value)
-        {
-            return (!Min.HasValue || value >= Min.Value) && (!Max.HasValue || value <= Max.Value);
-        }
     }
 
     // Original project's settings is weird (but consistent with BeatSaver's API)
@@ -647,7 +647,9 @@ internal class LegacyPreset
 
         public static ModRequirements FromString(string stringValue)
         {
-            var set = new HashSet<string>(stringValue.ToLower().Split(','));
+            var set = stringValue
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
             return new ModRequirements
             {
                 NoodleExtensions = set.Contains("ne"),
@@ -752,20 +754,28 @@ internal class LegacyPreset
 
     private class StringArrayConverter() : JsonConverter<IList<string>>
     {
-        private char[] Separators { get; } = [','];
+        private static readonly char[] DefaultSeparators = " ,，；;|\t".ToCharArray();
+        private static readonly char[] DefaultSeparatorsNoSpace = ",，；;|\t".ToCharArray();
+        private readonly char[] _separators = DefaultSeparators;
 
-        private string SeparatorForWrite { get; } = ",";
+        private readonly string _separatorForWrite = ",";
+
+        [UsedImplicitly]
+        public StringArrayConverter(bool splitSpace) : this() =>
+            _separators = splitSpace ? DefaultSeparators : DefaultSeparatorsNoSpace;
 
         public StringArrayConverter(char[] separators, string separatorForWrite) : this()
         {
-            Separators = separators;
-            SeparatorForWrite = separatorForWrite;
+            _separators = separators;
+            _separatorForWrite = separatorForWrite;
         }
 
         public override IList<string> ReadJson(JsonReader reader, Type objectType, IList<string>? existingValue, bool hasExistingValue, JsonSerializer serializer)
         {
             var value = reader.Value as string;
-            return string.IsNullOrWhiteSpace(value) ? [] : value.Split(Separators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            return string.IsNullOrWhiteSpace(value)
+                ? []
+                : value.Split(_separators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         }
 
         public override void WriteJson(JsonWriter writer, IList<string>? value, JsonSerializer serializer)
@@ -776,26 +786,16 @@ internal class LegacyPreset
                 return;
             }
 
-            var stringValue = string.Join(SeparatorForWrite, value);
+            var stringValue = string.Join(_separatorForWrite, value);
             writer.WriteValue(stringValue);
         }
     }
 
     private class StringMultiLineArrayConverter() : StringArrayConverter(['\r', '\n'], Environment.NewLine);
 
-    private class EnumArrayConverter<T>() : JsonConverter<IList<T>> where T : struct, Enum
+    private class EnumArrayConverter<T> : JsonConverter<IList<T>> where T : struct, Enum
     {
         private readonly StringArrayConverter _arrayConverter = new();
-
-        public EnumArrayConverter(StringArrayConverter arrayConverter) : this()
-        {
-            _arrayConverter = arrayConverter;
-        }
-
-        public EnumArrayConverter(char[] separators, string separatorForWrite) : this()
-        {
-            _arrayConverter = new StringArrayConverter(separators, separatorForWrite);
-        }
 
         public override IList<T> ReadJson(JsonReader reader, Type objectType, IList<T>? existingValue, bool hasExistingValue, JsonSerializer serializer)
         {
@@ -818,6 +818,25 @@ internal class LegacyPreset
         protected virtual string ConvertEnumToString(T value)
         {
             return value.ToString();
+        }
+    }
+
+    private class IntArrayConverter : JsonConverter<IList<int>>
+    {
+        private readonly StringArrayConverter _arrayConverter = new();
+
+        public override IList<int> ReadJson(JsonReader reader, Type objectType, IList<int>? existingValue,
+            bool hasExistingValue, JsonSerializer serializer)
+        {
+            var existingList = existingValue?.Select(num => num.ToString()).ToList();
+            var stringList = _arrayConverter.ReadJson(reader, objectType, existingList, hasExistingValue, serializer);
+            return stringList.Select(int.Parse).ToList();
+        }
+
+        public override void WriteJson(JsonWriter writer, IList<int>? value, JsonSerializer serializer)
+        {
+            var stringList = value?.Select(num => num.ToString()).ToList();
+            _arrayConverter.WriteJson(writer, stringList, serializer);
         }
     }
 
