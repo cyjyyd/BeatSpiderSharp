@@ -31,8 +31,16 @@ public static class LegacyPresetLoader
 #if DEBUG
         SaveLegacyPreset(legacy, $"./{Path.GetFileName(path)}.legacy.saved.json");
 #endif
-        var preset = ConvertToPreset(legacy, Path.GetFileNameWithoutExtension(path), author);
-        return preset;
+        try
+        {
+            var preset = ConvertToPreset(legacy, Path.GetFileNameWithoutExtension(path), author);
+            return preset;
+        }
+        catch (Exception e) when (e is not LegacyConversionException)
+        {
+            Log.Error(e, "Unexpected exception when converting legacy preset");
+            throw new LegacyConversionException("Failed to convert legacy preset", innerException: e);
+        }
     }
 
     internal static LegacyPreset? LoadLegacyPreset(string path)
@@ -87,9 +95,7 @@ public static class LegacyPresetLoader
                 input.Source = SongInputSource.ManualInput;
                 break;
             case LegacyPreset.DataSource.BeastSaber:
-                Log.Warning("BeastSaber source is not supported!");
-                input.Source = SongInputSource.BeatSaver;
-                break;
+                throw new LegacyConversionException("BeastSaber source is not supported", "Input Source");
             case LegacyPreset.DataSource.Mapper:
                 MergeMapperSetting(options, legacyPreset.Mapper);
                 input.Source = SongInputSource.BeatSaver;
@@ -103,9 +109,8 @@ public static class LegacyPresetLoader
                 input.Source = SongInputSource.BeatSaver;
                 break;
             default:
-                Log.Warning("Unknown song source from legacy preset: {Source}", legacyPreset.SongSource);
-                input.Source = SongInputSource.BeatSaver;
-                break;
+                throw new LegacyConversionException(
+                    $"Unknown song source from legacy preset: {legacyPreset.SongSource}", "Input Source");
         }
 
         var name = GetPresetName(fileName);
@@ -216,21 +221,30 @@ public static class LegacyPresetLoader
         }
     }
 
-    private static void CombineRange<T>(RangeOption<T> o, LegacyPreset.IMinMaxSetting<T> s) where T : struct, IComparable<T>
+    //TODO Unit tests
+    private static void CombineRange<T>(RangeOption<T> o, LegacyPreset.IMinMaxSetting<T> s, string name)
+        where T : struct, IComparable<T>
     {
-        var min1 = o.Min;
-        var max1 = o.Max;
-        var min2 = s.Min;
-        var max2 = s.Max;
+        var min = s.Min;
+        var max = s.Max;
         if (o.Enable)
         {
-            min1 = min1.HasValue && min2.HasValue ? min1.Value.CompareTo(min2.Value) > 0 ? min1 : min2 : min1 ?? min2;
-            max1 = max1.HasValue && max2.HasValue ? max1.Value.CompareTo(max2.Value) < 0 ? max1 : max2 : max1 ?? max2;
+            var oMin = o.Min;
+            var oMax = o.Max;
+            //merge the range values
+            min = oMin.HasValue && min.HasValue ? oMin.Value.CompareTo(min.Value) > 0 ? oMin : min : oMin ?? min;
+            max = oMax.HasValue && max.HasValue ? oMax.Value.CompareTo(max.Value) < 0 ? oMax : max : oMax ?? max;
+        }
+
+        if (min.HasValue && max.HasValue && min.Value.CompareTo(max.Value) > 0)
+        {
+            Log.Error("Invalid range with min greater than max. Min: {Min}, Max: {Max}", min.Value, max.Value);
+            throw new LegacyConversionException("Invalid range with min greater than max.", name);
         }
 
         o.Enable = true;
-        o.Min = min1;
-        o.Max = max1;
+        o.Min = min;
+        o.Max = max;
     }
 
     private static void MergeBeatSaverSetting(DetailOptions options, LegacyPreset.BeatSaverSetting setting)
@@ -238,7 +252,16 @@ public static class LegacyPresetLoader
         Log.Debug("Merging BeatSaver source settings into filter options");
         if (!string.IsNullOrWhiteSpace(setting.SearchKeyword) || setting.StartPage.HasValue)
         {
-            Log.Warning("BeatSaver search and page number are not supported!");
+            //TODO add search keyword to search filter settings once search filter is supported
+            throw new LegacyConversionException("BeatSaver search keyword and starting page are not supported",
+                "BeatSaver Search");
+        }
+
+        if (setting.Sort != LegacyPreset.BeatSaverSetting.SortType.Latest)
+        {
+            throw new LegacyConversionException(
+                $"Only {nameof(LegacyPreset.BeatSaverSetting.SortType.Latest)} BeatSaver search sort type is supported",
+                "BeatSaver Search");
         }
 
         if (setting.AutoMapper.Enable)
@@ -263,31 +286,31 @@ public static class LegacyPresetLoader
         if (setting.Bpm.Enable)
         {
             Log.Debug("Merging BeatSaver BPM setting into filter options");
-            CombineRange(options.Bpm, setting.Bpm);
+            CombineRange(options.Bpm, setting.Bpm, "Bpm");
         }
 
         if (setting.Nps.Enable)
         {
-            Log.Debug("Merging BeatSaver NPS setting into filter options");
-            CombineRange(options.Nps, setting.Nps);
+            Log.Information("Merging BeatSaver NPS setting into filter options");
+            CombineRange(options.Nps, setting.Nps, "Nps");
         }
 
         if (setting.Duration.Enable)
         {
-            Log.Debug("Merging BeatSaver duration setting into filter options");
-            CombineRange(options.Duration, setting.Duration);
+            Log.Information("Merging BeatSaver duration setting into filter options");
+            CombineRange(options.Duration, setting.Duration, "Duration");
         }
 
         if (setting.UploadTime.Enable)
         {
-            Log.Debug("Merging BeatSaver upload time setting into filter options");
-            CombineRange(options.UploadTime, setting.UploadTime);
+            Log.Information("Merging BeatSaver upload time setting into filter options");
+            CombineRange(options.UploadTime, setting.UploadTime, "UploadTime");
         }
 
         if (setting.Rating.Enable)
         {
-            Log.Debug("Merging BeatSaver rating setting into filter options");
-            CombineRange(options.Rating, setting.Rating);
+            Log.Information("Merging BeatSaver rating setting into filter options");
+            CombineRange(options.Rating, setting.Rating, "Rating");
         }
 
         if (setting.RequireMods.Enable)
@@ -310,7 +333,7 @@ public static class LegacyPresetLoader
         Log.Debug("Merging ScoreSaber source setting into filter options");
         options.ScoreSaberRanking.Enable = true;
         options.ScoreSaberRanking.Filter = new HashSet<RankingStatus> { RankingStatus.Ranked };
-        CombineRange(options.ScoreSaberStars, setting.StarDifficulty);
+        CombineRange(options.ScoreSaberStars, setting.StarDifficulty, "ScoreSaber stars");
     }
 
     private static void MergeMapperSetting(DetailOptions options, LegacyPreset.MapperSetting setting)
@@ -323,7 +346,10 @@ public static class LegacyPresetLoader
             Log.Information("Found uploader id from mapper url: {Url}", url);
             if (options.UploaderId.Enable && !options.UploaderId.Filter.Contains(id))
             {
-                Log.Warning("Overwriting existing UploaderID filter to {New}", id);
+                Log.Error("Conflicting uploader id. '{Id1}' from url is not included in filter setting {Id2}", id,
+                    options.UploaderId.Filter);
+                throw new LegacyConversionException("Conflicting uploader id from url and song filter setting",
+                    "Mapper Url");
             }
 
             options.UploaderId.Enable = true;
@@ -332,7 +358,8 @@ public static class LegacyPresetLoader
         }
         else
         {
-            Log.Warning("Failed to find uploader id from mapper url: {Url}", url);
+            Log.Error("Failed to find uploader id from mapper url: {Url}", url);
+            throw new LegacyConversionException("Cannot find uploader id from mapper url", "Mapper Url");
         }
     }
 

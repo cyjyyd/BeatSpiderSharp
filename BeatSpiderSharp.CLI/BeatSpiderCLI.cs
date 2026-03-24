@@ -49,14 +49,29 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
             // allow empty author
             var author = options.PresetAuthor ?? Environment.UserName;
 
-            var p = LegacyPresetLoader.LoadAndConvertLegacyPreset(options.InputPreset, author);
-            if (p == null)
+            try
             {
-                Log.Error("Failed to load preset");
+                var p = LegacyPresetLoader.LoadAndConvertLegacyPreset(options.InputPreset, author);
+                if (p == null)
+                {
+                    Log.Error("Failed to load legacy preset");
+                    return -1;
+                }
+
+                preset = p;
+            }
+            catch (LegacyConversionException e)
+            {
+                Log.Error(e.InnerException, "Failed to convert legacy preset: {Message}", e.Message);
+                Log.Debug(e, "Legacy conversion exception details");
+                return -1;
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, "Unexpected error while loading legacy preset: {Message}", e.Message);
                 return -1;
             }
 
-            preset = p;
             if (!string.IsNullOrWhiteSpace(options.SaveConvertedPresetPath))
             {
                 Log.Information("Saving converted preset");
