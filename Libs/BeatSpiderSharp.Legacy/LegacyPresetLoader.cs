@@ -175,7 +175,7 @@ public static class LegacyPresetLoader
             Log.Warning("Play count is not supported");
         }
 
-        if (preset.SongFilter.GeneratedSong.Enable || preset.SongFilter.SageScore.Enable)
+        if (preset.SongFilter.AutoMapper.Enable || preset.SongFilter.SageScore.Enable)
         {
             Log.Warning("AI maps are not supported");
         }
@@ -241,7 +241,7 @@ public static class LegacyPresetLoader
             Log.Warning("BeatSaver search and page number are not supported!");
         }
 
-        if (setting.GeneratedSong.Enable)
+        if (setting.AutoMapper.Enable)
         {
             Log.Warning("AI generated songs are not supported!");
         }
