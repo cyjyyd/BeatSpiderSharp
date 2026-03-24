@@ -8,14 +8,14 @@ public class DetailOptions
     public IncludeOption<int> UploaderId { get; set; } = new();
     public IncludeOption<string> UploaderName { get; set; } = new(StringComparer.InvariantCultureIgnoreCase);
     public RangeOption<DateTimeOffset> UploadTime { get; set; } = new();
-    public LogicIncludeOption<string> IncludeTags { get; set; } = new();
-    public ExcludeOption<string> ExcludeTags { get; set; } = new();
+    public LogicIncludeOption<string> IncludeTags { get; set; } = new(StringComparer.InvariantCultureIgnoreCase);
+    public LogicExcludeOption<string> ExcludeTags { get; set; } = new(StringComparer.InvariantCultureIgnoreCase);
     public RangeOption<int> UpVotes { get; set; } = new();
     public RangeOption<float> UpVotePercentage { get; set; } = new();
     public RangeOption<int> DownVotes { get; set; } = new();
     public RangeOption<float> DownVotePercentage { get; set; } = new();
     public RangeOption<float> Rating { get; set; } = new();
-    public Option FullSpread { get; set; } = new();
+    public Option<bool> FullSpread { get; set; } = new(true);
     public LogicIncludeOption<MCharacteristic> IncludeCharacteristics { get; set; } = new();
     public LogicIncludeOption<MDifficulty> IncludeDifficulties { get; set; } = new();
     public LogicIncludeOption<MMod> RequireMods { get; set; } = new();

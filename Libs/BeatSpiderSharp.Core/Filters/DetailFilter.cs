@@ -90,13 +90,13 @@ public class DetailFilter: ISongFilter
 
         if (filter.FullSpread)
         {
-            var pass = diffs
+            var ifFullSpread = diffs
                 .GroupBy(diff => diff.GetMCharacteristic())
                 .Where(group => group.Key is not (null or MCharacteristic.Lightshow))
                 .Any(group =>
                     group.DistinctBy(diff => diff.Difficulty).Count() == Enum.GetValues<MDifficulty>().Length
                 );
-            if (!pass)
+            if (ifFullSpread == filter.FullSpread.Filter)
             {
                 LogExclusion(song, "Not full spread");
                 return false;

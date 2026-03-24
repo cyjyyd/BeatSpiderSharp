@@ -257,10 +257,8 @@ public static class LegacyPresetLoader
             options.ScoreSaberRanking.Filter = new HashSet<RankingStatus> { RankingStatus.Ranked };
         }
 
-        if (setting.Difficulty.Enable)
-        {
-            options.FullSpread.Enable = options.FullSpread.Enable || setting.Difficulty.IsFullSpread;
-        }
+        options.FullSpread.Enable = setting.Difficulty.Enable;
+        options.FullSpread.Filter = setting.Difficulty.IsFullSpread;
 
         if (setting.Bpm.Enable)
         {
@@ -367,7 +365,8 @@ public static class LegacyPresetLoader
             ExcludeTags =
             {
                 Enable = setting.Tags.Exclude.Enable,
-                Filter = setting.Tags.Exclude.Content.ToHashSet()
+                Filter = setting.Tags.Exclude.Content.ToHashSet(),
+                IsOr = !setting.Tags.Exclude.And
             },
             UpVotes = new()
             {
