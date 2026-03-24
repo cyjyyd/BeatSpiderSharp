@@ -5,9 +5,11 @@ namespace BeatSpiderSharp.Models.BeatSaver;
 public record Stats
 {
     [JsonProperty("plays")]
+    [Obsolete("BeatSaver does not keep track of it")]
     public int Plays { get; init; }
 
     [JsonProperty("downloads")]
+    [Obsolete("BeatSaver does not keep track of it.")]
     public int Downloads { get; init; }
 
     [JsonProperty("upvotes")]

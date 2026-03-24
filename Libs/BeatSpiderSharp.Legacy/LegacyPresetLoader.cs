@@ -162,62 +162,13 @@ public static class LegacyPresetLoader
     {
         if (preset.SearchFilter.SearchEnabled)
         {
-            Log.Warning("Search filter is not implemented");
+            //TODO
+            throw new LegacyConversionException("Search filter is not implemented");
         }
         
         if (preset.ThumbnailTag.Enable.Enable)
         {
-            Log.Warning("Thumbnail Tagging is not supported");
-        }
-        
-        if (preset.SongFilter.DownloadCount.Enable)
-        {
-            Log.Warning("Download count is not a thing anymore");
-        }
-        
-        if (preset.SongFilter.PlayCount.Enable)
-        {
-            Log.Warning("Play count is not supported");
-        }
-
-        if (preset.SongFilter.AutoMapper.Enable || preset.SongFilter.SageScore.Enable)
-        {
-            Log.Warning("AI maps are not supported");
-        }
-        
-        if (preset.SongFilter.FilterChinese.Enable)
-        {
-            Log.Warning("Chinese filter is not implemented");
-        }
-
-        if (preset.SongFilter.MapSeconds.Enable)
-        {
-            Log.Warning("Map seconds is not supported");
-        }
-        
-        if (preset.SongFilter.MapLength.Enable)
-        {
-            Log.Warning("Map length is not supported");
-        }
-        
-        if (preset.SongFilter.Offset.Enable)
-        {
-            Log.Warning("Offset is not supported");
-        }
-        
-        if (preset.SongFilter.Events.Enable)
-        {
-            Log.Warning("Events is not supported");
-        }
-        
-        if (preset.SongFilter.ParityErrors.Enable || preset.SongFilter.ParityWarns.Enable || preset.SongFilter.ParityResets.Enable)
-        {
-            Log.Warning("Parity data is not supported");
-        }
-        
-        if (preset.SongFilter.MaxScore.Enable)
-        {
-            Log.Warning("Max score is not supported");
+            throw new LegacyConversionException("Thumbnail Tag is not supported");
         }
     }
 
@@ -264,9 +215,25 @@ public static class LegacyPresetLoader
                 "BeatSaver Search");
         }
 
-        if (setting.AutoMapper.Enable)
+        // following BeatSaver API's handling
+        var (autoMapperEnable, autoMapperFilter) = setting.AutoMapper switch
         {
-            Log.Warning("AI generated songs are not supported!");
+            { Enable: false } => (true, false), // no auto mapped 
+            { AutoMapper: true } => (false, false), // all maps
+            { AutoMapper: false } => (true, false) // only auto mapped
+        };
+
+        if (options.AutoMapper.Enable && autoMapperEnable && options.AutoMapper.Filter != autoMapperFilter)
+        {
+            throw new LegacyConversionException(
+                "Conflicting auto mapper settings from BeatSaver search setting and song filter setting",
+                "AutoMapper");
+        }
+
+        if (autoMapperEnable)
+        {
+            options.AutoMapper.Enable = true;
+            options.AutoMapper.Filter = autoMapperFilter;
         }
 
         if (setting.RankedSong.Enable && setting.RankedSong.IsRanked)
@@ -441,13 +408,30 @@ public static class LegacyPresetLoader
             RequireMods = new()
             {
                 Enable = setting.RequireMods.Enable,
-                Filter = setting.RequireMods.Mods.ToMMods().ToHashSet(),
+                Filter = setting.RequireMods.Mods.ToMMods(),
                 IsOr = true
             },
             ExcludeMods =
             {
                 Enable = setting.ExcludeMods.Enable,
                 Filter = setting.ExcludeMods.Mods.ToMMods()
+            },
+            Downloads =
+            {
+                Enable = setting.DownloadCount.Enable,
+                Min = setting.DownloadCount.Min,
+                Max = setting.DownloadCount.Max
+            },
+            Plays =
+            {
+                Enable = setting.PlayCount.Enable,
+                Min = setting.PlayCount.Min,
+                Max = setting.PlayCount.Max
+            },
+            AutoMapper =
+            {
+                Enable = setting.AutoMapper.Enable,
+                Filter = setting.AutoMapper.AutoMapper
             },
             Bpm = new()
             {
@@ -461,11 +445,29 @@ public static class LegacyPresetLoader
                 Min = setting.Duration.Min,
                 Max = setting.Duration.Max
             },
+            Seconds =
+            {
+                Enable = setting.MapSeconds.Enable,
+                Min = setting.MapSeconds.Min,
+                Max = setting.MapSeconds.Max
+            },
+            Beats =
+            {
+                Enable = setting.MapLength.Enable,
+                Min = setting.MapLength.Min,
+                Max = setting.MapLength.Max
+            },
             Njs = new()
             {
                 Enable = setting.Njs.Enable,
                 Min = setting.Njs.Min,
                 Max = setting.Njs.Max
+            },
+            Offset =
+            {
+                Enable = setting.Offset.Enable,
+                Min = setting.Offset.Min,
+                Max = setting.Offset.Max
             },
             Nps = new()
             {
@@ -485,6 +487,12 @@ public static class LegacyPresetLoader
                 Min = setting.Bombs.Min,
                 Max = setting.Bombs.Max
             },
+            Events =
+            {
+                Enable = setting.Events.Enable,
+                Min = setting.Events.Min,
+                Max = setting.Events.Max
+            },
             Walls = new()
             {
                 Enable = setting.Walls.Enable,
@@ -503,6 +511,36 @@ public static class LegacyPresetLoader
                 Enable = setting.Stars.Enable,
                 Min = setting.Stars.Min,
                 Max = setting.Stars.Max
+            },
+            ParityErrors = new RangeOption<int>
+            {
+                Enable = setting.ParityErrors.Enable,
+                Min = setting.ParityErrors.Min,
+                Max = setting.ParityErrors.Max
+            },
+            ParityWarns = new RangeOption<int>
+            {
+                Enable = setting.ParityWarns.Enable,
+                Min = setting.ParityWarns.Min,
+                Max = setting.ParityWarns.Max
+            },
+            ParityResets = new RangeOption<int>
+            {
+                Enable = setting.ParityResets.Enable,
+                Min = setting.ParityResets.Min,
+                Max = setting.ParityResets.Max
+            },
+            SageScore = new RangeOption<int>
+            {
+                Enable = setting.SageScore.Enable,
+                Min = setting.SageScore.Min,
+                Max = setting.SageScore.Max
+            },
+            MaxScore = new RangeOption<int>
+            {
+                Enable = setting.MaxScore.Enable,
+                Min = setting.MaxScore.Min,
+                Max = setting.MaxScore.Max
             },
             Chinese = new()
             {

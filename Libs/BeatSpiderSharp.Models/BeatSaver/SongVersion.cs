@@ -13,6 +13,11 @@ public record SongVersion
     [JsonProperty("createdAt")]
     public DateTimeOffset? CreatedAt { get; init; }
 
+    /**
+     * How likely the map is auto generated.
+     * Higher is less likely.
+     * BeatSage maps are usually negative
+     */
     [JsonProperty("sageScore")]
     public int SageScore { get; init; }
 
