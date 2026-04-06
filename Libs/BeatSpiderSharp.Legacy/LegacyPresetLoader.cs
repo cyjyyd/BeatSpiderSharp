@@ -256,7 +256,7 @@ public static partial class LegacyPresetLoader
             }
 
             options.ScoreSaberRanking.Enable = true;
-            options.ScoreSaberRanking.Filter = states;
+            options.ScoreSaberRanking.Filter.ReplaceWith(states);
         }
 
         options.FullSpread.Enable = setting.Difficulty.Enable;
@@ -404,12 +404,12 @@ public static partial class LegacyPresetLoader
     {
         return new DetailOptions
         {
-            UploaderId =
+            UploaderId = new()
             {
                 Enable = setting.UploaderIds.Enable,
                 Filter = setting.UploaderIds.Content.ToHashSet()
             },
-            UploaderName =
+            UploaderName = new()
             {
                 Enable = setting.UploaderNames.Enable,
                 Filter = setting.UploaderNames.Content.ToHashSet(StringComparer.InvariantCultureIgnoreCase)
@@ -426,7 +426,7 @@ public static partial class LegacyPresetLoader
                 Filter = setting.Tags.Include.Content.ToHashSet(StringComparer.InvariantCultureIgnoreCase),
                 IsOr = !setting.Tags.Include.And
             },
-            ExcludeTags =
+            ExcludeTags = new()
             {
                 Enable = setting.Tags.Exclude.Enable,
                 Filter = setting.Tags.Exclude.Content.ToHashSet(StringComparer.InvariantCultureIgnoreCase),
@@ -481,27 +481,26 @@ public static partial class LegacyPresetLoader
                 Filter = setting.RequireMods.Mods.ToMMods(),
                 IsOr = true
             },
-            ExcludeMods =
+            ExcludeMods = new()
             {
                 Enable = setting.ExcludeMods.Enable,
                 Filter = setting.ExcludeMods.Mods.ToMMods()
             },
-            Downloads =
+            Downloads = new()
             {
                 Enable = setting.DownloadCount.Enable,
                 Min = setting.DownloadCount.Min,
                 Max = setting.DownloadCount.Max
             },
-            Plays =
+            Plays = new()
             {
                 Enable = setting.PlayCount.Enable,
                 Min = setting.PlayCount.Min,
                 Max = setting.PlayCount.Max
             },
-            AutoMapper =
+            AutoMapper = new(setting.AutoMapper.AutoMapper)
             {
-                Enable = setting.AutoMapper.Enable,
-                Filter = setting.AutoMapper.AutoMapper
+                Enable = setting.AutoMapper.Enable
             },
             Bpm = new()
             {
@@ -515,13 +514,13 @@ public static partial class LegacyPresetLoader
                 Min = setting.Duration.Min,
                 Max = setting.Duration.Max
             },
-            Seconds =
+            Seconds = new()
             {
                 Enable = setting.MapSeconds.Enable,
                 Min = setting.MapSeconds.Min,
                 Max = setting.MapSeconds.Max
             },
-            Beats =
+            Beats = new()
             {
                 Enable = setting.MapLength.Enable,
                 Min = setting.MapLength.Min,
@@ -533,7 +532,7 @@ public static partial class LegacyPresetLoader
                 Min = setting.Njs.Min,
                 Max = setting.Njs.Max
             },
-            Offset =
+            Offset = new()
             {
                 Enable = setting.Offset.Enable,
                 Min = setting.Offset.Min,
@@ -557,7 +556,7 @@ public static partial class LegacyPresetLoader
                 Min = setting.Bombs.Min,
                 Max = setting.Bombs.Max
             },
-            Events =
+            Events = new()
             {
                 Enable = setting.Events.Enable,
                 Min = setting.Events.Min,
@@ -569,7 +568,7 @@ public static partial class LegacyPresetLoader
                 Min = setting.Walls.Min,
                 Max = setting.Walls.Max
             },
-            ScoreSaberRanking =
+            ScoreSaberRanking = new()
             {
                 Enable = setting.RankedSong.Enable,
                 Filter = setting.RankedSong.IsRanked

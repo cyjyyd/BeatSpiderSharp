@@ -18,9 +18,9 @@ public class OutputConfig
 
     public bool SkipExisting { get; set; }
 
-    public IList<string> ExistingSongPaths { get; set; } = new List<string>();
+    public IList<string> ExistingSongPaths { get; init; } = new List<string>();
     
     public bool CopyLocalSongs { get; set; }
-    
-    public IList<string> LocalSongPaths { get; set; } = new List<string>();
+
+    public IList<string> LocalSongPaths { get; init; } = new List<string>();
 }

@@ -16,6 +16,13 @@ public class Option<T>(T initialValue) : Option
     public T Filter { get; set; } = initialValue;
 }
 
+public class CollectionOption<TCollection, TValue>(TCollection initialValue)
+    : Option where TCollection : ICollection<TValue>
+{
+    [JsonProperty(Order = -89)]
+    public TCollection Filter { get; init; } = initialValue;
+}
+
 public class RangeOption<T> : Option where T : struct, IComparable<T>
 {
     public T? Min { get; set; }
@@ -26,7 +33,7 @@ public class RangeOption<T> : Option where T : struct, IComparable<T>
 }
 
 public abstract class ValueSetOption<T>(IEqualityComparer<T>? comparer = null)
-    : Option<ISet<T>>(new HashSet<T>(comparer));
+    : CollectionOption<ISet<T>, T>(new HashSet<T>(comparer));
 //TODO Unit tests
 public abstract class LogicSetOption<T>(IEqualityComparer<T>? comparer = null) : ValueSetOption<T>(comparer)
 {
