@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Diagnostics;
+using System.Text.RegularExpressions;
 using BeatSpiderSharp.Extensions;
 using BeatSpiderSharp.Models.Enums;
 using BeatSpiderSharp.Models.Preset;
@@ -220,7 +221,7 @@ public static class LegacyPresetLoader
         {
             { Enable: false } => (true, false), // no auto mapped 
             { AutoMapper: true } => (false, false), // all maps
-            { AutoMapper: false } => (true, false) // only auto mapped
+            { AutoMapper: false } => (true, true) // only auto mapped
         };
 
         if (options.AutoMapper.Enable && autoMapperEnable && options.AutoMapper.Filter != autoMapperFilter)
@@ -236,15 +237,25 @@ public static class LegacyPresetLoader
             options.AutoMapper.Filter = autoMapperFilter;
         }
 
-        if (setting.RankedSong.Enable && setting.RankedSong.IsRanked)
+        if (setting.RankedSong.Enable)
         {
-            if (options.ScoreSaberRanking.Enable)
+            var states = setting.RankedSong.IsRanked
+                ? new HashSet<RankingStatus> { RankingStatus.Ranked }
+                : new HashSet<RankingStatus> { RankingStatus.Unranked, RankingStatus.Qualified };
+            if (options.ScoreSaberRanking is { Enable: true, Filter.Count: > 0 })
             {
-                Log.Warning("Overwriting ScoreSaber option to {Status}", RankingStatus.Ranked);
+                states.IntersectWith(options.ScoreSaberRanking.Filter);
+                if (states.Count == 0)
+                {
+                    Log.Error(
+                        "Conflicting ScoreSaber ranked filter. BeatSaver input setting and song filter has no overlap for ScoreSaber ranking status");
+                    throw new LegacyConversionException(
+                        "Conflicting ScoreSaber ranked filter with BeatSaver input setting", "ScoreSaberRanking");
+                }
             }
 
             options.ScoreSaberRanking.Enable = true;
-            options.ScoreSaberRanking.Filter = new HashSet<RankingStatus> { RankingStatus.Ranked };
+            options.ScoreSaberRanking.Filter = states;
         }
 
         options.FullSpread.Enable = setting.Difficulty.Enable;
@@ -280,18 +291,68 @@ public static class LegacyPresetLoader
             CombineRange(options.Rating, setting.Rating, "Rating");
         }
 
-        if (setting.RequireMods.Enable)
+        // mods related is a bit tricky
+        var requireMods = setting.RequireMods.RequireMods.ToMMods();
+        var excludeMods = setting.ExcludeMods.ExcludeMods.ToMMods();
+        if (setting.RequireMods.Enable && setting.ExcludeMods.Enable)
         {
-            options.RequireMods.Enable = true;
-            options.RequireMods.Filter = options.RequireMods.Filter
-                .Concat(setting.RequireMods.RequireMods.ToMMods()).ToHashSet();
+            if (requireMods.Intersect(excludeMods).Any())
+            {
+                Log.Error(
+                    "Conflicting mods requirement. BeatSaver input setting has overlap for required and excluded mods");
+                throw new LegacyConversionException("Conflicting mods requirement in BeatSaver input setting",
+                    "Required/Excluded Mods");
+            }
         }
 
-        if (setting.ExcludeMods.Enable)
+        if (setting.RequireMods.Enable && requireMods.Count > 0)
         {
-            options.ExcludeMods.Enable = true;
-            options.ExcludeMods.Filter = options.ExcludeMods.Filter
-                .Concat(setting.ExcludeMods.ExcludeMods.ToMMods()).ToHashSet();
+            // BeatSaver tests the values as OR
+            if (options.RequireMods && options.RequireMods.Filter.Count > 0)
+            {
+                //Original project only tests this as or
+                Debug.Assert(options.RequireMods.IsOr);
+                if (!options.RequireMods.Filter.SetEquals(requireMods))
+                {
+                    // to achieve this, it needs to AND the results of two OR operations
+                    Log.Error(
+                        "Unsupported mods requirement combination between BeatSaver input setting and song filter setting");
+                    throw new LegacyConversionException(
+                        "Unsupported mods requirement combination between BeatSaver input setting and song filter setting",
+                        "Required Mods");
+                }
+            }
+            else
+            {
+                options.RequireMods.Enable = true;
+                options.RequireMods.IsOr = true;
+                options.RequireMods.Filter.Clear();
+                options.RequireMods.Filter.UnionWith(requireMods);
+            }
+        }
+
+        if (setting.ExcludeMods.Enable && excludeMods.Count > 0)
+        {
+            // BeatSaver tests the values in a very weird way.
+            // If a map doesn't require at least one of the excluded mods, it passes the filter.
+            // As a result, a filter excluding all mods will consider a map requiring one mod satisfying the condition.
+            if (excludeMods.Count != 1)
+            {
+                // no support for this ridiculous logic
+                Log.Error("Unsupported BeatSaver excluded mods setting");
+                throw new LegacyConversionException("Unsupported BeatSaver excluded mods setting", "Excluded Mods");
+            }
+
+            if (options.ExcludeMods)
+            {
+                options.ExcludeMods.Filter.Add(excludeMods.First());
+            }
+            else
+            {
+                options.ExcludeMods.Enable = true;
+                options.ExcludeMods.Filter.Clear();
+                options.ExcludeMods.Filter.Add(excludeMods.First());
+            }
         }
     }
 
