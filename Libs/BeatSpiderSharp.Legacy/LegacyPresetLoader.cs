@@ -412,7 +412,7 @@ public static partial class LegacyPresetLoader
             UploaderName =
             {
                 Enable = setting.UploaderNames.Enable,
-                Filter = setting.UploaderNames.Content.ToHashSet()
+                Filter = setting.UploaderNames.Content.ToHashSet(StringComparer.InvariantCultureIgnoreCase)
             },
             UploadTime = new()
             {
@@ -423,13 +423,13 @@ public static partial class LegacyPresetLoader
             IncludeTags = new()
             {
                 Enable = setting.Tags.Include.Enable,
-                Filter = setting.Tags.Include.Content.ToHashSet(),
+                Filter = setting.Tags.Include.Content.ToHashSet(StringComparer.InvariantCultureIgnoreCase),
                 IsOr = !setting.Tags.Include.And
             },
             ExcludeTags =
             {
                 Enable = setting.Tags.Exclude.Enable,
-                Filter = setting.Tags.Exclude.Content.ToHashSet(),
+                Filter = setting.Tags.Exclude.Content.ToHashSet(StringComparer.InvariantCultureIgnoreCase),
                 IsOr = !setting.Tags.Exclude.And
             },
             UpVotes = new()
