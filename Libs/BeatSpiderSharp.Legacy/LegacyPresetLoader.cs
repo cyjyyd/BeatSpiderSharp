@@ -9,10 +9,11 @@ using Serilog;
 
 namespace BeatSpiderSharp.Legacy;
 
-public static class LegacyPresetLoader
+public static partial class LegacyPresetLoader
 {
     //beatsaver.com/profile/58338
-    private static readonly Regex MapperUrlRegex = new(@"beatsaver.com/profile/(\d+)", RegexOptions.Compiled);
+    [GeneratedRegex(@"beatsaver\.com/profile/(\d+)")]
+    private static partial Regex MapperUrlRegex();
 
     private static readonly JsonSerializer LegacySerializer = JsonSerializer.Create(new JsonSerializerSettings
     {
@@ -376,7 +377,7 @@ public static class LegacyPresetLoader
     {
         var url = setting.MapperAddress;
         Log.Debug("Extracting uploader id from mapper url: {Url}", url);
-        var match = MapperUrlRegex.Match(url);
+        var match = MapperUrlRegex().Match(url);
         if (match is { Success: true, Groups.Count: 2 } && int.TryParse(match.Groups[1].Value, out var id))
         {
             Log.Information("Found uploader id from mapper url: {Url}", url);
