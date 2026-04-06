@@ -101,7 +101,7 @@ public static class LegacyPresetLoader
                 input.Source = SongInputSource.BeatSaver;
                 break;
             case LegacyPreset.DataSource.ScoreSaber:
-                MergeScoreSaverSetting(options, legacyPreset.ScoreSaber);
+                MergeScoreSaberSetting(options, legacyPreset.ScoreSaber);
                 input.Source = SongInputSource.BeatSaver;
                 break;
             case LegacyPreset.DataSource.BeatSaver:
@@ -295,11 +295,19 @@ public static class LegacyPresetLoader
         }
     }
 
-    private static void MergeScoreSaverSetting(DetailOptions options, LegacyPreset.ScoreSaberSetting setting)
+    private static void MergeScoreSaberSetting(DetailOptions options, LegacyPreset.ScoreSaberSetting setting)
     {
         Log.Debug("Merging ScoreSaber source setting into filter options");
+        if (options.ScoreSaberRanking && !options.ScoreSaberRanking.SatisfiedBy(RankingStatus.Ranked))
+        {
+            Log.Error("Conflicting ScoreSaber ranking status. Existing filter setting does not include {Status}",
+                RankingStatus.Ranked);
+            throw new LegacyConversionException("Conflicting ScoreSaber ranking status", "ScoreSaberRanking");
+        }
+
         options.ScoreSaberRanking.Enable = true;
-        options.ScoreSaberRanking.Filter = new HashSet<RankingStatus> { RankingStatus.Ranked };
+        options.ScoreSaberRanking.Filter.Clear();
+        options.ScoreSaberRanking.Filter.Add(RankingStatus.Ranked);
         CombineRange(options.ScoreSaberStars, setting.StarDifficulty, "ScoreSaber stars");
     }
 
@@ -311,7 +319,7 @@ public static class LegacyPresetLoader
         if (match is { Success: true, Groups.Count: 2 } && int.TryParse(match.Groups[1].Value, out var id))
         {
             Log.Information("Found uploader id from mapper url: {Url}", url);
-            if (options.UploaderId.Enable && !options.UploaderId.Filter.Contains(id))
+            if (options.UploaderId && !options.UploaderId.SatisfiedBy(id))
             {
                 Log.Error("Conflicting uploader id. '{Id1}' from url is not included in filter setting {Id2}", id,
                     options.UploaderId.Filter);
