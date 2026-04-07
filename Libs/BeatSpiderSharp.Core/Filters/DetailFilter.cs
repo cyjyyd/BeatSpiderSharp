@@ -15,6 +15,10 @@ public class DetailFilter: ISongFilter
     public DetailFilter(DetailOptions options)
     {
         _options = options;
+        if (options.Downloads.Enable || options.Plays.Enable)
+        {
+            throw new Exception("Downloads and Plays filters are not supported as BeatSaver do not keep track of them");
+        }
     }
 
     public bool FilterSong(BeatSpiderSong song)
@@ -96,7 +100,7 @@ public class DetailFilter: ISongFilter
                 .Any(group =>
                     group.DistinctBy(diff => diff.Difficulty).Count() == Enum.GetValues<MDifficulty>().Length
                 );
-            if (ifFullSpread == filter.FullSpread.Filter)
+            if (ifFullSpread != filter.FullSpread.Filter)
             {
                 LogExclusion(song, "Not full spread");
                 return false;
@@ -142,6 +146,15 @@ public class DetailFilter: ISongFilter
             }
         }
 
+        if (filter.AutoMapper)
+        {
+            if (filter.AutoMapper.Filter != map.Automapper)
+            {
+                LogExclusion(song, "Automapper status not matching");
+                return false;
+            }
+        }
+
         if (filter.Bpm && !filter.Bpm.InRange(map.Metadata?.Bpm))
         {
             LogExclusion(song, "BPM not in range");
@@ -154,9 +167,27 @@ public class DetailFilter: ISongFilter
             return false;
         }
 
+        if (filter.Seconds && !diffs.Any(diff => filter.Seconds.InRange(diff.Seconds)))
+        {
+            LogExclusion(song, "Seconds not in range");
+            return false;
+        }
+
+        if (filter.Beats && !diffs.Any(diff => filter.Beats.InRange(diff.Length)))
+        {
+            LogExclusion(song, "Beats not in range");
+            return false;
+        }
+
         if (filter.Njs && !diffs.Any(diff => filter.Njs.InRange(diff.Njs)))
         {
             LogExclusion(song, "NJS not in range");
+            return false;
+        }
+
+        if (filter.Offset && !diffs.Any(diff => filter.Offset.InRange(diff.Offset)))
+        {
+            LogExclusion(song, "Offset not in range");
             return false;
         }
 
@@ -178,6 +209,12 @@ public class DetailFilter: ISongFilter
             return false;
         }
 
+        if (filter.Events && !diffs.Any(diff => filter.Events.InRange(diff.Events)))
+        {
+            LogExclusion(song, "Events not in range");
+            return false;
+        }
+
         if (filter.Walls && !diffs.Any(diff => filter.Walls.InRange(diff.Obstacles)))
         {
             LogExclusion(song, "Walls not in range");
@@ -190,7 +227,7 @@ public class DetailFilter: ISongFilter
             return false;
         }
 
-        if (filter.BeatLeaderRanking && filter.BeatLeaderRanking.SatisfiedBy(map.BlRankingStatus))
+        if (filter.BeatLeaderRanking && !filter.BeatLeaderRanking.SatisfiedBy(map.BlRankingStatus))
         {
             LogExclusion(song, "Required BeatLeader ranking status not found");
             return false;
@@ -214,6 +251,36 @@ public class DetailFilter: ISongFilter
                 LogExclusion(song, "BeatLeader stars not in range");
                 return false;
             }
+        }
+
+        if (filter.ParityErrors && !diffs.Any(diff => filter.ParityErrors.InRange(diff.ParitySummary?.Errors)))
+        {
+            LogExclusion(song, "ParityErrors not in range");
+            return false;
+        }
+
+        if (filter.ParityWarns && !diffs.Any(diff => filter.ParityWarns.InRange(diff.ParitySummary?.Warns)))
+        {
+            LogExclusion(song, "ParityWarns not in range");
+            return false;
+        }
+
+        if (filter.ParityResets && !diffs.Any(diff => filter.ParityResets.InRange(diff.ParitySummary?.Resets)))
+        {
+            LogExclusion(song, "ParityResets not in range");
+            return false;
+        }
+
+        if (filter.SageScore && !filter.SageScore.InRange(latest.SageScore))
+        {
+            LogExclusion(song, "SageScore not in range");
+            return false;
+        }
+
+        if (filter.MaxScore && !diffs.Any(diff => filter.MaxScore.InRange(diff.MaxScore)))
+        {
+            LogExclusion(song, "MaxScore not in range");
+            return false;
         }
 
         // TODO Implement chinese filter
