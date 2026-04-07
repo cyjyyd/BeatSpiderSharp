@@ -414,23 +414,41 @@ public static partial class LegacyPresetLoader
                 Enable = setting.UploaderNames.Enable,
                 Filter = setting.UploaderNames.Content.ToHashSet(StringComparer.InvariantCultureIgnoreCase)
             },
-            UploadTime = new()
+            RequireMods = new LogicIncludeOption<MMod>
             {
-                Enable = setting.UploadTime.Enable,
-                Min = setting.UploadTime.Min,
-                Max = setting.UploadTime.Max
+                Enable = setting.RequireMods.Enable,
+                Filter = setting.RequireMods.Mods.ToMMods(),
+                IsOr = true
             },
-            IncludeTags = new()
+            ExcludeMods = new ExcludeOption<MMod>
             {
-                Enable = setting.Tags.Include.Enable,
-                Filter = setting.Tags.Include.Content.ToHashSet(StringComparer.InvariantCultureIgnoreCase),
-                IsOr = !setting.Tags.Include.And
+                Enable = setting.ExcludeMods.Enable,
+                Filter = setting.ExcludeMods.Mods.ToMMods()
             },
-            ExcludeTags = new()
+            IncludeCharacteristics = new LogicIncludeOption<MCharacteristic>
             {
-                Enable = setting.Tags.Exclude.Enable,
-                Filter = setting.Tags.Exclude.Content.ToHashSet(StringComparer.InvariantCultureIgnoreCase),
-                IsOr = !setting.Tags.Exclude.And
+                Enable = setting.IncludeCharacteristics.Enable,
+                Filter = setting.IncludeCharacteristics.Characteristics.Select(EnumConversions.ToMCharacteristic)
+                    .ToHashSet(),
+                IsOr = true
+            },
+            IncludeDifficulties = new LogicIncludeOption<MDifficulty>
+            {
+                Enable = setting.IncludeDifficulties.Enable,
+                Filter = setting.IncludeDifficulties.Difficulties.Select(EnumConversions.ToMDifficulty).ToHashSet(),
+                IsOr = !setting.IncludeDifficulties.And
+            },
+            Downloads = new RangeOption<int>
+            {
+                Enable = setting.DownloadCount.Enable,
+                Min = setting.DownloadCount.Min,
+                Max = setting.DownloadCount.Max
+            },
+            Plays = new RangeOption<int>
+            {
+                Enable = setting.PlayCount.Enable,
+                Min = setting.PlayCount.Min,
+                Max = setting.PlayCount.Max
             },
             UpVotes = new()
             {
@@ -462,45 +480,20 @@ public static partial class LegacyPresetLoader
                 Min = setting.Rating.Min,
                 Max = setting.Rating.Max
             },
-            IncludeCharacteristics = new()
-            {
-                Enable = setting.IncludeCharacteristics.Enable,
-                Filter = setting.IncludeCharacteristics.Characteristics.Select(EnumConversions.ToMCharacteristic)
-                    .ToHashSet(),
-                IsOr = true
-            },
-            IncludeDifficulties = new()
-            {
-                Enable = setting.IncludeDifficulties.Enable,
-                Filter = setting.IncludeDifficulties.Difficulties.Select(EnumConversions.ToMDifficulty).ToHashSet(),
-                IsOr = !setting.IncludeDifficulties.And
-            },
-            RequireMods = new()
-            {
-                Enable = setting.RequireMods.Enable,
-                Filter = setting.RequireMods.Mods.ToMMods(),
-                IsOr = true
-            },
-            ExcludeMods = new()
-            {
-                Enable = setting.ExcludeMods.Enable,
-                Filter = setting.ExcludeMods.Mods.ToMMods()
-            },
-            Downloads = new()
-            {
-                Enable = setting.DownloadCount.Enable,
-                Min = setting.DownloadCount.Min,
-                Max = setting.DownloadCount.Max
-            },
-            Plays = new()
-            {
-                Enable = setting.PlayCount.Enable,
-                Min = setting.PlayCount.Min,
-                Max = setting.PlayCount.Max
-            },
             AutoMapper = new(setting.AutoMapper.AutoMapper)
             {
                 Enable = setting.AutoMapper.Enable
+            },
+            ScoreSaberRanking = new IncludeOption<RankingStatus>
+            {
+                Enable = setting.RankedSong.Enable,
+                Filter = setting.RankedSong.IsRanked
+                    ? new HashSet<RankingStatus> { RankingStatus.Ranked }
+                    : new HashSet<RankingStatus> { RankingStatus.Unranked, RankingStatus.Qualified }
+            },
+            Chinese = new Option
+            {
+                Enable = setting.FilterChinese.Enable
             },
             Bpm = new()
             {
@@ -538,17 +531,17 @@ public static partial class LegacyPresetLoader
                 Min = setting.Offset.Min,
                 Max = setting.Offset.Max
             },
+            Notes = new RangeOption<int>
+            {
+                Enable = setting.Notes.Enable,
+                Min = setting.Notes.Min,
+                Max = setting.Notes.Max
+            },
             Nps = new()
             {
                 Enable = setting.Nps.Enable,
                 Min = setting.Nps.Min,
                 Max = setting.Nps.Max
-            },
-            Notes = new()
-            {
-                Enable = setting.Notes.Enable,
-                Min = setting.Notes.Min,
-                Max = setting.Notes.Max
             },
             Bombs = new()
             {
@@ -567,13 +560,6 @@ public static partial class LegacyPresetLoader
                 Enable = setting.Walls.Enable,
                 Min = setting.Walls.Min,
                 Max = setting.Walls.Max
-            },
-            ScoreSaberRanking = new()
-            {
-                Enable = setting.RankedSong.Enable,
-                Filter = setting.RankedSong.IsRanked
-                    ? new HashSet<RankingStatus> { RankingStatus.Ranked }
-                    : new HashSet<RankingStatus> { RankingStatus.Unranked, RankingStatus.Qualified }
             },
             ScoreSaberStars = new()
             {
@@ -599,6 +585,24 @@ public static partial class LegacyPresetLoader
                 Min = setting.ParityResets.Min,
                 Max = setting.ParityResets.Max
             },
+            UploadTime = new RangeOption<DateTimeOffset>
+            {
+                Enable = setting.UploadTime.Enable,
+                Min = setting.UploadTime.Min,
+                Max = setting.UploadTime.Max
+            },
+            IncludeTags = new LogicIncludeOption<string>
+            {
+                Enable = setting.Tags.Include.Enable,
+                Filter = setting.Tags.Include.Content.ToHashSet(StringComparer.InvariantCultureIgnoreCase),
+                IsOr = !setting.Tags.Include.And
+            },
+            ExcludeTags = new LogicExcludeOption<string>
+            {
+                Enable = setting.Tags.Exclude.Enable,
+                Filter = setting.Tags.Exclude.Content.ToHashSet(StringComparer.InvariantCultureIgnoreCase),
+                IsOr = !setting.Tags.Exclude.And
+            },
             SageScore = new RangeOption<int>
             {
                 Enable = setting.SageScore.Enable,
@@ -610,10 +614,6 @@ public static partial class LegacyPresetLoader
                 Enable = setting.MaxScore.Enable,
                 Min = setting.MaxScore.Min,
                 Max = setting.MaxScore.Max
-            },
-            Chinese = new()
-            {
-                Enable = setting.FilterChinese.Enable
             }
         };
     }
