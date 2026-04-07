@@ -1,6 +1,6 @@
-﻿using BeatSpiderSharp.Core.Interfaces;
+﻿using System.Runtime.CompilerServices;
+using BeatSpiderSharp.Core.Interfaces;
 using BeatSpiderSharp.Core.Utilities;
-using BeatSpiderSharp.Extensions;
 using BeatSpiderSharp.Models;
 using BeatSpiderSharp.Models.Enums;
 using BeatSpiderSharp.Models.Preset.FilterOptions;
@@ -8,11 +8,11 @@ using Serilog;
 
 namespace BeatSpiderSharp.Core.Filters;
 
-public class DetailFilter: ISongFilter
+public class SongDetailFilter : ISongFilter
 {
-    private readonly DetailOptions _options;
-    
-    public DetailFilter(DetailOptions options)
+    private readonly SongDetailOptions _options;
+
+    public SongDetailFilter(SongDetailOptions options)
     {
         _options = options;
         if (options.Downloads.Enable || options.Plays.Enable)
@@ -106,45 +106,6 @@ public class DetailFilter: ISongFilter
                 return false;
             }
         }
-        
-        if (filter.IncludeCharacteristics)
-        {
-            var mapCharas = diffs.Select(diff => diff.GetMCharacteristic()).SelectNotNull().ToHashSet();
-            if (!filter.IncludeCharacteristics.SatisfiedBy(mapCharas))
-            {
-                LogExclusion(song, "Required characteristics not found");
-                return false;
-            }
-        }
-        
-        if (filter.IncludeDifficulties)
-        {
-            var mapDiffs = diffs.Select(diff => diff.GetMDifficulty()).SelectNotNull().ToHashSet();
-            if (!filter.IncludeDifficulties.SatisfiedBy(mapDiffs))
-            {
-                LogExclusion(song, "Required difficulties not found");
-                return false;
-            }
-        }
-
-        if (filter.RequireMods)
-        {
-            var pass = diffs.Any(diff => filter.RequireMods.SatisfiedBy(diff.GetMMods()));
-            if (!pass)
-            {
-                LogExclusion(song, "Required mods not found");
-                return false;
-            }
-        }
-        
-        if (filter.ExcludeMods)
-        {
-            if (diffs.All(diff => !filter.ExcludeMods.SatisfiedBy(diff.GetMMods())))
-            {
-                LogExclusion(song, "All difficulties contain excluded mods");
-                return false;
-            }
-        }
 
         if (filter.AutoMapper)
         {
@@ -167,60 +128,6 @@ public class DetailFilter: ISongFilter
             return false;
         }
 
-        if (filter.Seconds && !diffs.Any(diff => filter.Seconds.InRange(diff.Seconds)))
-        {
-            LogExclusion(song, "Seconds not in range");
-            return false;
-        }
-
-        if (filter.Beats && !diffs.Any(diff => filter.Beats.InRange(diff.Length)))
-        {
-            LogExclusion(song, "Beats not in range");
-            return false;
-        }
-
-        if (filter.Njs && !diffs.Any(diff => filter.Njs.InRange(diff.Njs)))
-        {
-            LogExclusion(song, "NJS not in range");
-            return false;
-        }
-
-        if (filter.Offset && !diffs.Any(diff => filter.Offset.InRange(diff.Offset)))
-        {
-            LogExclusion(song, "Offset not in range");
-            return false;
-        }
-
-        if (filter.Nps && !diffs.Any(diff => filter.Nps.InRange(diff.Nps)))
-        {
-            LogExclusion(song, "NPS not in range");
-            return false;
-        }
-
-        if (filter.Notes && !diffs.Any(diff => filter.Notes.InRange(diff.Notes)))
-        {
-            LogExclusion(song, "Notes not in range");
-            return false;
-        }
-
-        if (filter.Bombs && !diffs.Any(diff => filter.Bombs.InRange(diff.Bombs)))
-        {
-            LogExclusion(song, "Bombs not in range");
-            return false;
-        }
-
-        if (filter.Events && !diffs.Any(diff => filter.Events.InRange(diff.Events)))
-        {
-            LogExclusion(song, "Events not in range");
-            return false;
-        }
-
-        if (filter.Walls && !diffs.Any(diff => filter.Walls.InRange(diff.Obstacles)))
-        {
-            LogExclusion(song, "Walls not in range");
-            return false;
-        }
-
         if (filter.ScoreSaberRanking && !filter.ScoreSaberRanking.SatisfiedBy(map.RankingStatus))
         {
             LogExclusion(song, "Required ScoreSaber ranking status not found");
@@ -233,53 +140,9 @@ public class DetailFilter: ISongFilter
             return false;
         }
 
-        if (filter.ScoreSaberStars)
-        {
-            var pass = diffs.Any(diff => filter.ScoreSaberStars.InRange(diff.Stars));
-            if (!pass)
-            {
-                LogExclusion(song, "ScoreSaber stars not in range");
-                return false;
-            }
-        }
-        
-        if (filter.BeatLeaderStars)
-        {
-            var pass = diffs.Any(diff => filter.BeatLeaderStars.InRange(diff.BlStars));
-            if (!pass)
-            {
-                LogExclusion(song, "BeatLeader stars not in range");
-                return false;
-            }
-        }
-
-        if (filter.ParityErrors && !diffs.Any(diff => filter.ParityErrors.InRange(diff.ParitySummary?.Errors)))
-        {
-            LogExclusion(song, "ParityErrors not in range");
-            return false;
-        }
-
-        if (filter.ParityWarns && !diffs.Any(diff => filter.ParityWarns.InRange(diff.ParitySummary?.Warns)))
-        {
-            LogExclusion(song, "ParityWarns not in range");
-            return false;
-        }
-
-        if (filter.ParityResets && !diffs.Any(diff => filter.ParityResets.InRange(diff.ParitySummary?.Resets)))
-        {
-            LogExclusion(song, "ParityResets not in range");
-            return false;
-        }
-
         if (filter.SageScore && !filter.SageScore.InRange(latest.SageScore))
         {
             LogExclusion(song, "SageScore not in range");
-            return false;
-        }
-
-        if (filter.MaxScore && !diffs.Any(diff => filter.MaxScore.InRange(diff.MaxScore)))
-        {
-            LogExclusion(song, "MaxScore not in range");
             return false;
         }
 
@@ -290,7 +153,8 @@ public class DetailFilter: ISongFilter
         // }
         return true;
     }
-    
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void LogExclusion(BeatSpiderSong song, string reason)
     {
         Log.Verbose("Song {Bsr} excluded: {Reason}", song.Bsr, reason);

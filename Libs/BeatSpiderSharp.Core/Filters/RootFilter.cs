@@ -8,12 +8,12 @@ public class RootFilter : ISongFilter
 {
     private readonly FilterConfig _config;
 
-    private readonly List<ISongFilter> _filters = new(1); // there is currently only one sub filter existing
+    private readonly List<ISongFilter> _filters;
 
     public RootFilter(FilterConfig config)
     {
         _config = config;
-        _filters.Add(new DetailFilter(_config.DetailFilter));
+        _filters = [new SongDetailFilter(_config.SongDetailFilter), new LevelDetailFilter(_config.LevelDetailOptions)];
     }
 
     public bool FilterSong(BeatSpiderSong song)

@@ -4,5 +4,7 @@ namespace BeatSpiderSharp.Models.Preset;
 
 public class FilterConfig
 {
-    public DetailOptions DetailFilter { get; set; } = new();
+    public SongDetailOptions SongDetailFilter { get; init; } = new();
+
+    public LevelDetailOptions LevelDetailOptions { get; init; } = new();
 }
