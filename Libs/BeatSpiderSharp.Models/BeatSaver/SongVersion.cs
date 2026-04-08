@@ -19,7 +19,7 @@ public record SongVersion
      * BeatSage maps are usually negative
      */
     [JsonProperty("sageScore")]
-    public int SageScore { get; init; }
+    public int? SageScore { get; init; }
 
     [JsonProperty("diffs")]
     public List<Diff> Diffs { get; init; } = [];

@@ -5,10 +5,10 @@ namespace BeatSpiderSharp.Models.BeatSaver;
 public record Metadata
 {
     [JsonProperty("bpm")]
-    public float Bpm { get; init; }
+    public float? Bpm { get; init; }
 
     [JsonProperty("duration")]
-    public int Duration { get; init; }
+    public int? Duration { get; init; }
 
     [JsonProperty("songName")]
     public string? SongName { get; init; }

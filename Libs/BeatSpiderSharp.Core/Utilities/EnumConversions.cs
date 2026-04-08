@@ -27,6 +27,7 @@ public static class EnumConversions
             "Hard" => MDifficulty.Hard,
             "Expert" => MDifficulty.Expert,
             "ExpertPlus" => MDifficulty.ExpertPlus,
+            null => null,
 #if DEBUG
             _ => throw new Exception($"Unknown difficulty: {diff.Difficulty}")
 #else
@@ -47,6 +48,7 @@ public static class EnumConversions
             "Lawless" => MCharacteristic.Lawless,
             "Lightshow" => MCharacteristic.Lightshow,
             "Legacy" => MCharacteristic.Legacy,
+            null => null,
 #if DEBUG
             _ => throw new Exception($"Unknown characteristic: {diff.Characteristic}")
 #else

@@ -29,7 +29,7 @@ public class SongDetailFilter : ISongFilter
         var diffs = latest.Diffs;
         var stats = map.Stats;
 
-        if (filter.UploaderId && (map.Uploader == null || !filter.UploaderId.SatisfiedBy(map.Uploader.Id)))
+        if (filter.UploaderId && (map.Uploader?.Id == null || !filter.UploaderId.SatisfiedBy(map.Uploader.Id.Value)))
         {
             LogExclusion(song, "Required uploader id not found");
             return false;

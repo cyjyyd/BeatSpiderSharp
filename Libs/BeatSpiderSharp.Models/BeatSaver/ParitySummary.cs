@@ -5,11 +5,11 @@ namespace BeatSpiderSharp.Models.BeatSaver;
 public record ParitySummary
 {
     [JsonProperty("errors")]
-    public int Errors { get; init; }
+    public int? Errors { get; init; }
 
     [JsonProperty("warns")]
-    public int Warns { get; init; }
+    public int? Warns { get; init; }
 
     [JsonProperty("resets")]
-    public int Resets { get; init; }
+    public int? Resets { get; init; }
 }

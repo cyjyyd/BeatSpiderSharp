@@ -5,28 +5,28 @@ namespace BeatSpiderSharp.Models.BeatSaver;
 public record Diff
 {
     [JsonProperty("njs")]
-    public float Njs { get; init; }
+    public float? Njs { get; init; }
 
     [JsonProperty("offset")]
-    public float Offset { get; init; }
+    public float? Offset { get; init; }
 
     [JsonProperty("notes")]
-    public int Notes { get; init; }
+    public int? Notes { get; init; }
 
     [JsonProperty("bombs")]
-    public int Bombs { get; init; }
+    public int? Bombs { get; init; }
 
     [JsonProperty("obstacles")]
-    public int Obstacles { get; init; }
+    public int? Obstacles { get; init; }
 
     [JsonProperty("nps")]
-    public float Nps { get; init; }
+    public float? Nps { get; init; }
 
     /**
      * The length of the map in beats.
      */
     [JsonProperty("length")]
-    public float Length { get; init; }
+    public float? Length { get; init; }
 
     [JsonProperty("characteristic")]
     public string? Characteristic { get; init; }
@@ -35,7 +35,7 @@ public record Diff
     public string? Difficulty { get; init; }
 
     [JsonProperty("events")]
-    public int Events { get; init; }
+    public int? Events { get; init; }
 
     [JsonProperty("chroma")]
     public bool Chroma { get; init; }
@@ -50,22 +50,22 @@ public record Diff
     public bool Cinema { get; init; }
 
     [JsonProperty("seconds")]
-    public float Seconds { get; init; }
+    public float? Seconds { get; init; }
 
     [JsonProperty("paritySummary")]
     public ParitySummary? ParitySummary { get; init; }
 
     [JsonProperty("stars")]
-    public float Stars { get; init; }
+    public float? Stars { get; init; }
 
     [JsonProperty("maxScore")]
-    public int MaxScore { get; init; }
+    public int? MaxScore { get; init; }
 
     [JsonProperty("label")]
     public string? Label { get; init; }
 
     [JsonProperty("blStars")]
-    public float BlStars { get; init; }
+    public float? BlStars { get; init; }
 
     [JsonProperty("environment")]
     public string? Environment { get; init; }

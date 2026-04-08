@@ -5,7 +5,7 @@ namespace BeatSpiderSharp.Models.BeatSaver;
 public record User
 {
     [JsonProperty("id")]
-    public int Id { get; init; }
+    public int? Id { get; init; }
 
     [JsonProperty("name")]
     public string? Name { get; init; }
