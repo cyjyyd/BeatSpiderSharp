@@ -28,7 +28,7 @@ public static class EnumConversions
             "Expert" => MDifficulty.Expert,
             "ExpertPlus" => MDifficulty.ExpertPlus,
 #if DEBUG
-            _ => throw new Exception($"Unknown difficulty: {diff.Characteristic}")
+            _ => throw new Exception($"Unknown difficulty: {diff.Difficulty}")
 #else
             _ => null
 #endif
