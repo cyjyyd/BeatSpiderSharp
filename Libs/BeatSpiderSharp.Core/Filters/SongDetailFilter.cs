@@ -1,6 +1,6 @@
-﻿using BeatSpiderSharp.Core.Interfaces;
+﻿using System.Runtime.CompilerServices;
+using BeatSpiderSharp.Core.Interfaces;
 using BeatSpiderSharp.Core.Utilities;
-using BeatSpiderSharp.Extensions;
 using BeatSpiderSharp.Models;
 using BeatSpiderSharp.Models.Enums;
 using BeatSpiderSharp.Models.Preset.FilterOptions;
@@ -8,13 +8,17 @@ using Serilog;
 
 namespace BeatSpiderSharp.Core.Filters;
 
-public class DetailFilter: ISongFilter
+public class SongDetailFilter : ISongFilter
 {
-    private readonly DetailOptions _options;
-    
-    public DetailFilter(DetailOptions options)
+    private readonly SongDetailOptions _options;
+
+    public SongDetailFilter(SongDetailOptions options)
     {
         _options = options;
+        if (options.Downloads.Enable || options.Plays.Enable)
+        {
+            throw new Exception("Downloads and Plays filters are not supported as BeatSaver do not keep track of them");
+        }
     }
 
     public bool FilterSong(BeatSpiderSong song)
@@ -90,54 +94,24 @@ public class DetailFilter: ISongFilter
 
         if (filter.FullSpread)
         {
-            var pass = diffs
+            var ifFullSpread = diffs
                 .GroupBy(diff => diff.GetMCharacteristic())
                 .Where(group => group.Key is not (null or MCharacteristic.Lightshow))
                 .Any(group =>
                     group.DistinctBy(diff => diff.Difficulty).Count() == Enum.GetValues<MDifficulty>().Length
                 );
-            if (!pass)
+            if (ifFullSpread != filter.FullSpread.Filter)
             {
                 LogExclusion(song, "Not full spread");
                 return false;
             }
         }
-        
-        if (filter.IncludeCharacteristics)
-        {
-            var mapCharas = diffs.Select(diff => diff.GetMCharacteristic()).SelectNotNull().ToHashSet();
-            if (!filter.IncludeCharacteristics.SatisfiedBy(mapCharas))
-            {
-                LogExclusion(song, "Required characteristics not found");
-                return false;
-            }
-        }
-        
-        if (filter.IncludeDifficulties)
-        {
-            var mapDiffs = diffs.Select(diff => diff.GetMDifficulty()).SelectNotNull().ToHashSet();
-            if (!filter.IncludeDifficulties.SatisfiedBy(mapDiffs))
-            {
-                LogExclusion(song, "Required difficulties not found");
-                return false;
-            }
-        }
 
-        if (filter.RequireMods)
+        if (filter.AutoMapper)
         {
-            var pass = diffs.Any(diff => filter.RequireMods.SatisfiedBy(diff.GetMMods()));
-            if (!pass)
+            if (filter.AutoMapper.Filter != map.Automapper)
             {
-                LogExclusion(song, "Required mods not found");
-                return false;
-            }
-        }
-        
-        if (filter.ExcludeMods)
-        {
-            if (diffs.All(diff => !filter.ExcludeMods.SatisfiedBy(diff.GetMMods())))
-            {
-                LogExclusion(song, "All difficulties contain excluded mods");
+                LogExclusion(song, "Automapper status not matching");
                 return false;
             }
         }
@@ -154,66 +128,22 @@ public class DetailFilter: ISongFilter
             return false;
         }
 
-        if (filter.Njs && !diffs.Any(diff => filter.Njs.InRange(diff.Njs)))
-        {
-            LogExclusion(song, "NJS not in range");
-            return false;
-        }
-
-        if (filter.Nps && !diffs.Any(diff => filter.Nps.InRange(diff.Nps)))
-        {
-            LogExclusion(song, "NPS not in range");
-            return false;
-        }
-
-        if (filter.Notes && !diffs.Any(diff => filter.Notes.InRange(diff.Notes)))
-        {
-            LogExclusion(song, "Notes not in range");
-            return false;
-        }
-
-        if (filter.Bombs && !diffs.Any(diff => filter.Bombs.InRange(diff.Bombs)))
-        {
-            LogExclusion(song, "Bombs not in range");
-            return false;
-        }
-
-        if (filter.Walls && !diffs.Any(diff => filter.Walls.InRange(diff.Obstacles)))
-        {
-            LogExclusion(song, "Walls not in range");
-            return false;
-        }
-
         if (filter.ScoreSaberRanking && !filter.ScoreSaberRanking.SatisfiedBy(map.RankingStatus))
         {
             LogExclusion(song, "Required ScoreSaber ranking status not found");
             return false;
         }
 
-        if (filter.BeatLeaderRanking && filter.BeatLeaderRanking.SatisfiedBy(map.BlRankingStatus))
+        if (filter.BeatLeaderRanking && !filter.BeatLeaderRanking.SatisfiedBy(map.BlRankingStatus))
         {
             LogExclusion(song, "Required BeatLeader ranking status not found");
             return false;
         }
 
-        if (filter.ScoreSaberStars)
+        if (filter.SageScore && !filter.SageScore.InRange(latest.SageScore))
         {
-            var pass = diffs.Any(diff => filter.ScoreSaberStars.InRange(diff.Stars));
-            if (!pass)
-            {
-                LogExclusion(song, "ScoreSaber stars not in range");
-                return false;
-            }
-        }
-        
-        if (filter.BeatLeaderStars)
-        {
-            var pass = diffs.Any(diff => filter.BeatLeaderStars.InRange(diff.BlStars));
-            if (!pass)
-            {
-                LogExclusion(song, "BeatLeader stars not in range");
-                return false;
-            }
+            LogExclusion(song, "SageScore not in range");
+            return false;
         }
 
         // TODO Implement chinese filter
@@ -223,7 +153,8 @@ public class DetailFilter: ISongFilter
         // }
         return true;
     }
-    
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void LogExclusion(BeatSpiderSong song, string reason)
     {
         Log.Verbose("Song {Bsr} excluded: {Reason}", song.Bsr, reason);

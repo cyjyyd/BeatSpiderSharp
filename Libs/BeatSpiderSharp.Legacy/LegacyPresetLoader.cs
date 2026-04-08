@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Diagnostics;
+using System.Text.RegularExpressions;
 using BeatSpiderSharp.Extensions;
 using BeatSpiderSharp.Models.Enums;
 using BeatSpiderSharp.Models.Preset;
@@ -8,10 +9,11 @@ using Serilog;
 
 namespace BeatSpiderSharp.Legacy;
 
-public static class LegacyPresetLoader
+public static partial class LegacyPresetLoader
 {
     //beatsaver.com/profile/58338
-    private static readonly Regex MapperUrlRegex = new(@"beatsaver.com/profile/(\d+)", RegexOptions.Compiled);
+    [GeneratedRegex(@"beatsaver\.com/profile/(\d+)")]
+    private static partial Regex MapperUrlRegex();
 
     private static readonly JsonSerializer LegacySerializer = JsonSerializer.Create(new JsonSerializerSettings
     {
@@ -31,8 +33,16 @@ public static class LegacyPresetLoader
 #if DEBUG
         SaveLegacyPreset(legacy, $"./{Path.GetFileName(path)}.legacy.saved.json");
 #endif
-        var preset = ConvertToPreset(legacy, Path.GetFileNameWithoutExtension(path), author);
-        return preset;
+        try
+        {
+            var preset = ConvertToPreset(legacy, Path.GetFileNameWithoutExtension(path), author);
+            return preset;
+        }
+        catch (Exception e) when (e is not LegacyConversionException)
+        {
+            Log.Error(e, "Unexpected exception when converting legacy preset");
+            throw new LegacyConversionException("Failed to convert legacy preset", innerException: e);
+        }
     }
 
     internal static LegacyPreset? LoadLegacyPreset(string path)
@@ -51,7 +61,8 @@ public static class LegacyPresetLoader
     {
         Log.Information("Converting legacy preset to new preset: {Name}", fileName);
         WarnUnsupported(legacyPreset);
-        var options = ConvertFilterOptions(legacyPreset.SongFilter);
+        var songOptions = ConvertSongFilterOptions(legacyPreset.SongFilter);
+        var levelOptions = ConvertLevelFilterOptions(legacyPreset.SongFilter);
         var output = new OutputConfig
         {
             LimitSongs = legacyPreset.Limits.Count.Enable,
@@ -74,6 +85,11 @@ public static class LegacyPresetLoader
                 : [legacyPreset.PlaylistInput.Path],
             ManualInput = legacyPreset.ManualSongInput.Songs.ToList()
         };
+        var filterConfig = new FilterConfig
+        {
+            SongDetailFilter = songOptions,
+            LevelDetailOptions = levelOptions
+        };
         Log.Debug("Legacy preset input source: {Source}", legacyPreset.SongSource);
         switch (legacyPreset.SongSource)
         {
@@ -87,25 +103,22 @@ public static class LegacyPresetLoader
                 input.Source = SongInputSource.ManualInput;
                 break;
             case LegacyPreset.DataSource.BeastSaber:
-                Log.Warning("BeastSaber source is not supported!");
-                input.Source = SongInputSource.BeatSaver;
-                break;
+                throw new LegacyConversionException("BeastSaber source is not supported", "Input Source");
             case LegacyPreset.DataSource.Mapper:
-                MergeMapperSetting(options, legacyPreset.Mapper);
+                MergeMapperSetting(filterConfig, legacyPreset.Mapper);
                 input.Source = SongInputSource.BeatSaver;
                 break;
             case LegacyPreset.DataSource.ScoreSaber:
-                MergeScoreSaverSetting(options, legacyPreset.ScoreSaber);
+                MergeScoreSaberSetting(filterConfig, legacyPreset.ScoreSaber);
                 input.Source = SongInputSource.BeatSaver;
                 break;
             case LegacyPreset.DataSource.BeatSaver:
-                MergeBeatSaverSetting(options, legacyPreset.BeatSaver);
+                MergeBeatSaverSetting(filterConfig, legacyPreset.BeatSaver);
                 input.Source = SongInputSource.BeatSaver;
                 break;
             default:
-                Log.Warning("Unknown song source from legacy preset: {Source}", legacyPreset.SongSource);
-                input.Source = SongInputSource.BeatSaver;
-                break;
+                throw new LegacyConversionException(
+                    $"Unknown song source from legacy preset: {legacyPreset.SongSource}", "Input Source");
         }
 
         var name = GetPresetName(fileName);
@@ -119,12 +132,12 @@ public static class LegacyPresetLoader
                           $"重制版项目地址：https://github.com/qe201020335/BeatSpiderSharp",
             Input = input,
             Output = output,
-            FilterOptions = [new FilterConfig { DetailFilter = options }]
+            FilterOptions = [filterConfig]
         };
 
 #if DEBUG
-        Log.Debug("Legacy preset: {@LegacyPreset}", legacyPreset);
-        Log.Debug("Converted preset: {@NewPreset}", preset);
+        Log.Verbose("Legacy preset: {@LegacyPreset}", legacyPreset);
+        Log.Verbose("Converted preset: {@NewPreset}", preset);
 #endif
         return preset;
     }
@@ -157,175 +170,234 @@ public static class LegacyPresetLoader
     {
         if (preset.SearchFilter.SearchEnabled)
         {
-            Log.Warning("Search filter is not implemented");
+            //TODO
+            throw new LegacyConversionException("Search filter is not implemented");
         }
         
         if (preset.ThumbnailTag.Enable.Enable)
         {
-            Log.Warning("Thumbnail Tagging is not supported");
-        }
-        
-        if (preset.SongFilter.DownloadCount.Enable)
-        {
-            Log.Warning("Download count is not a thing anymore");
-        }
-        
-        if (preset.SongFilter.PlayCount.Enable)
-        {
-            Log.Warning("Play count is not supported");
-        }
-
-        if (preset.SongFilter.GeneratedSong.Enable || preset.SongFilter.SageScore.Enable)
-        {
-            Log.Warning("AI maps are not supported");
-        }
-        
-        if (preset.SongFilter.FilterChinese.Enable)
-        {
-            Log.Warning("Chinese filter is not implemented");
-        }
-
-        if (preset.SongFilter.MapSeconds.Enable)
-        {
-            Log.Warning("Map seconds is not supported");
-        }
-        
-        if (preset.SongFilter.MapLength.Enable)
-        {
-            Log.Warning("Map length is not supported");
-        }
-        
-        if (preset.SongFilter.Offset.Enable)
-        {
-            Log.Warning("Offset is not supported");
-        }
-        
-        if (preset.SongFilter.Events.Enable)
-        {
-            Log.Warning("Events is not supported");
-        }
-        
-        if (preset.SongFilter.ParityErrors.Enable || preset.SongFilter.ParityWarns.Enable || preset.SongFilter.ParityResets.Enable)
-        {
-            Log.Warning("Parity data is not supported");
-        }
-        
-        if (preset.SongFilter.MaxScore.Enable)
-        {
-            Log.Warning("Max score is not supported");
+            throw new LegacyConversionException("Thumbnail Tag is not supported");
         }
     }
 
-    private static void CombineRange<T>(RangeOption<T> o, LegacyPreset.IMinMaxSetting<T> s) where T : struct, IComparable<T>
+    //TODO Unit tests
+    private static void CombineRange<T>(RangeOption<T> o, LegacyPreset.IMinMaxSetting<T> s, string name)
+        where T : struct, IComparable<T>
     {
-        var min1 = o.Min;
-        var max1 = o.Max;
-        var min2 = s.Min;
-        var max2 = s.Max;
+        var min = s.Min;
+        var max = s.Max;
         if (o.Enable)
         {
-            min1 = min1.HasValue && min2.HasValue ? min1.Value.CompareTo(min2.Value) > 0 ? min1 : min2 : min1 ?? min2;
-            max1 = max1.HasValue && max2.HasValue ? max1.Value.CompareTo(max2.Value) < 0 ? max1 : max2 : max1 ?? max2;
+            var oMin = o.Min;
+            var oMax = o.Max;
+            //merge the range values
+            min = oMin.HasValue && min.HasValue ? oMin.Value.CompareTo(min.Value) > 0 ? oMin : min : oMin ?? min;
+            max = oMax.HasValue && max.HasValue ? oMax.Value.CompareTo(max.Value) < 0 ? oMax : max : oMax ?? max;
+        }
+
+        if (min.HasValue && max.HasValue && min.Value.CompareTo(max.Value) > 0)
+        {
+            Log.Error("Invalid range with min greater than max. Min: {Min}, Max: {Max}", min.Value, max.Value);
+            throw new LegacyConversionException("Invalid range with min greater than max.", name);
         }
 
         o.Enable = true;
-        o.Min = min1;
-        o.Max = max1;
+        o.Min = min;
+        o.Max = max;
     }
 
-    private static void MergeBeatSaverSetting(DetailOptions options, LegacyPreset.BeatSaverSetting setting)
+    private static void MergeBeatSaverSetting(FilterConfig filterConfig, LegacyPreset.BeatSaverSetting setting)
     {
+        var songOptions = filterConfig.SongDetailFilter;
+        var levelOptions = filterConfig.LevelDetailOptions;
         Log.Debug("Merging BeatSaver source settings into filter options");
         if (!string.IsNullOrWhiteSpace(setting.SearchKeyword) || setting.StartPage.HasValue)
         {
-            Log.Warning("BeatSaver search and page number are not supported!");
+            //TODO add search keyword to search filter settings once search filter is supported
+            throw new LegacyConversionException("BeatSaver search keyword and starting page are not supported",
+                "BeatSaver Search");
         }
 
-        if (setting.GeneratedSong.Enable)
+        if (setting.Sort != LegacyPreset.BeatSaverSetting.SortType.Latest)
         {
-            Log.Warning("AI generated songs are not supported!");
+            throw new LegacyConversionException(
+                $"Only {nameof(LegacyPreset.BeatSaverSetting.SortType.Latest)} BeatSaver search sort type is supported",
+                "BeatSaver Search");
         }
 
-        if (setting.RankedSong.Enable && setting.RankedSong.IsRanked)
+        // following BeatSaver API's handling
+        var (autoMapperEnable, autoMapperFilter) = setting.AutoMapper switch
         {
-            if (options.ScoreSaberRanking.Enable)
+            { Enable: false } => (true, false), // no auto mapped 
+            { AutoMapper: true } => (false, false), // all maps
+            { AutoMapper: false } => (true, true) // only auto mapped
+        };
+
+        if (songOptions.AutoMapper.Enable && autoMapperEnable && songOptions.AutoMapper.Filter != autoMapperFilter)
+        {
+            throw new LegacyConversionException(
+                "Conflicting auto mapper settings from BeatSaver search setting and song filter setting",
+                "AutoMapper");
+        }
+
+        if (autoMapperEnable)
+        {
+            songOptions.AutoMapper.Enable = true;
+            songOptions.AutoMapper.Filter = autoMapperFilter;
+        }
+
+        if (setting.RankedSong.Enable)
+        {
+            var states = setting.RankedSong.IsRanked
+                ? new HashSet<RankingStatus> { RankingStatus.Ranked }
+                : new HashSet<RankingStatus> { RankingStatus.Unranked, RankingStatus.Qualified };
+            if (songOptions.ScoreSaberRanking is { Enable: true, Filter.Count: > 0 })
             {
-                Log.Warning("Overwriting ScoreSaber option to {Status}", RankingStatus.Ranked);
+                states.IntersectWith(songOptions.ScoreSaberRanking.Filter);
+                if (states.Count == 0)
+                {
+                    Log.Error(
+                        "Conflicting ScoreSaber ranked filter. BeatSaver input setting and song filter has no overlap for ScoreSaber ranking status");
+                    throw new LegacyConversionException(
+                        "Conflicting ScoreSaber ranked filter with BeatSaver input setting", "ScoreSaberRanking");
+                }
             }
 
-            options.ScoreSaberRanking.Enable = true;
-            options.ScoreSaberRanking.Filter = new HashSet<RankingStatus> { RankingStatus.Ranked };
+            songOptions.ScoreSaberRanking.Enable = true;
+            songOptions.ScoreSaberRanking.Filter.ReplaceWith(states);
         }
 
-        if (setting.Difficulty.Enable)
-        {
-            options.FullSpread.Enable = options.FullSpread.Enable || setting.Difficulty.IsFullSpread;
-        }
+        songOptions.FullSpread.Enable = setting.Difficulty.Enable;
+        songOptions.FullSpread.Filter = setting.Difficulty.IsFullSpread;
 
         if (setting.Bpm.Enable)
         {
             Log.Debug("Merging BeatSaver BPM setting into filter options");
-            CombineRange(options.Bpm, setting.Bpm);
+            CombineRange(songOptions.Bpm, setting.Bpm, "Bpm");
         }
 
         if (setting.Nps.Enable)
         {
-            Log.Debug("Merging BeatSaver NPS setting into filter options");
-            CombineRange(options.Nps, setting.Nps);
+            Log.Information("Merging BeatSaver NPS setting into filter options");
+            CombineRange(levelOptions.Nps, setting.Nps, "Nps");
         }
 
         if (setting.Duration.Enable)
         {
-            Log.Debug("Merging BeatSaver duration setting into filter options");
-            CombineRange(options.Duration, setting.Duration);
+            Log.Information("Merging BeatSaver duration setting into filter options");
+            CombineRange(songOptions.Duration, setting.Duration, "Duration");
         }
 
         if (setting.UploadTime.Enable)
         {
-            Log.Debug("Merging BeatSaver upload time setting into filter options");
-            CombineRange(options.UploadTime, setting.UploadTime);
+            Log.Information("Merging BeatSaver upload time setting into filter options");
+            CombineRange(songOptions.UploadTime, setting.UploadTime, "UploadTime");
         }
 
         if (setting.Rating.Enable)
         {
-            Log.Debug("Merging BeatSaver rating setting into filter options");
-            CombineRange(options.Rating, setting.Rating);
+            Log.Information("Merging BeatSaver rating setting into filter options");
+            CombineRange(songOptions.Rating, setting.Rating, "Rating");
         }
 
-        if (setting.RequireMods.Enable)
+        // mods related is a bit tricky
+        var requireMods = setting.RequireMods.RequireMods.ToMMods();
+        var excludeMods = setting.ExcludeMods.ExcludeMods.ToMMods();
+        if (setting.RequireMods.Enable && setting.ExcludeMods.Enable)
         {
-            options.RequireMods.Enable = true;
-            options.RequireMods.Filter = options.RequireMods.Filter
-                .Concat(setting.RequireMods.RequireMods.ToMMods()).ToHashSet();
+            if (requireMods.Intersect(excludeMods).Any())
+            {
+                Log.Error(
+                    "Conflicting mods requirement. BeatSaver input setting has overlap for required and excluded mods");
+                throw new LegacyConversionException("Conflicting mods requirement in BeatSaver input setting",
+                    "Required/Excluded Mods");
+            }
         }
 
-        if (setting.ExcludeMods.Enable)
+        if (setting.RequireMods.Enable && requireMods.Count > 0)
         {
-            options.ExcludeMods.Enable = true;
-            options.ExcludeMods.Filter = options.ExcludeMods.Filter
-                .Concat(setting.ExcludeMods.ExcludeMods.ToMMods()).ToHashSet();
+            // BeatSaver tests the values as OR
+            if (levelOptions.RequireMods && levelOptions.RequireMods.Filter.Count > 0)
+            {
+                //Original project only tests this as or
+                Debug.Assert(levelOptions.RequireMods.IsOr);
+                if (!levelOptions.RequireMods.Filter.SetEquals(requireMods))
+                {
+                    // to achieve this, it needs to AND the results of two OR operations
+                    Log.Error(
+                        "Unsupported mods requirement combination between BeatSaver input setting and song filter setting");
+                    throw new LegacyConversionException(
+                        "Unsupported mods requirement combination between BeatSaver input setting and song filter setting",
+                        "Required Mods");
+                }
+            }
+            else
+            {
+                levelOptions.RequireMods.Enable = true;
+                levelOptions.RequireMods.IsOr = true;
+                levelOptions.RequireMods.Filter.Clear();
+                levelOptions.RequireMods.Filter.UnionWith(requireMods);
+            }
+        }
+
+        if (setting.ExcludeMods.Enable && excludeMods.Count > 0)
+        {
+            // BeatSaver tests the values in a very weird way.
+            // If a map doesn't require at least one of the excluded mods, it passes the filter.
+            // As a result, a filter excluding all mods will consider a map requiring one mod satisfying the condition.
+            if (excludeMods.Count != 1)
+            {
+                // no support for this ridiculous logic
+                Log.Error("Unsupported BeatSaver excluded mods setting");
+                throw new LegacyConversionException("Unsupported BeatSaver excluded mods setting", "Excluded Mods");
+            }
+
+            if (levelOptions.ExcludeMods)
+            {
+                levelOptions.ExcludeMods.Filter.Add(excludeMods.First());
+            }
+            else
+            {
+                levelOptions.ExcludeMods.Enable = true;
+                levelOptions.ExcludeMods.Filter.Clear();
+                levelOptions.ExcludeMods.Filter.Add(excludeMods.First());
+            }
         }
     }
 
-    private static void MergeScoreSaverSetting(DetailOptions options, LegacyPreset.ScoreSaberSetting setting)
+    private static void MergeScoreSaberSetting(FilterConfig filterConfig, LegacyPreset.ScoreSaberSetting setting)
     {
+        var songOptions = filterConfig.SongDetailFilter;
+        var levelOptions = filterConfig.LevelDetailOptions;
         Log.Debug("Merging ScoreSaber source setting into filter options");
-        options.ScoreSaberRanking.Enable = true;
-        options.ScoreSaberRanking.Filter = new HashSet<RankingStatus> { RankingStatus.Ranked };
-        CombineRange(options.ScoreSaberStars, setting.StarDifficulty);
+        if (songOptions.ScoreSaberRanking && !songOptions.ScoreSaberRanking.SatisfiedBy(RankingStatus.Ranked))
+        {
+            Log.Error("Conflicting ScoreSaber ranking status. Existing filter setting does not include {Status}",
+                RankingStatus.Ranked);
+            throw new LegacyConversionException("Conflicting ScoreSaber ranking status", "ScoreSaberRanking");
+        }
+
+        songOptions.ScoreSaberRanking.Enable = true;
+        songOptions.ScoreSaberRanking.Filter.Clear();
+        songOptions.ScoreSaberRanking.Filter.Add(RankingStatus.Ranked);
+        CombineRange(levelOptions.ScoreSaberStars, setting.StarDifficulty, "ScoreSaber stars");
     }
 
-    private static void MergeMapperSetting(DetailOptions options, LegacyPreset.MapperSetting setting)
+    private static void MergeMapperSetting(FilterConfig filterConfig, LegacyPreset.MapperSetting setting)
     {
+        var options = filterConfig.SongDetailFilter;
         var url = setting.MapperAddress;
         Log.Debug("Extracting uploader id from mapper url: {Url}", url);
-        var match = MapperUrlRegex.Match(url);
+        var match = MapperUrlRegex().Match(url);
         if (match is { Success: true, Groups.Count: 2 } && int.TryParse(match.Groups[1].Value, out var id))
         {
             Log.Information("Found uploader id from mapper url: {Url}", url);
-            if (options.UploaderId.Enable && !options.UploaderId.Filter.Contains(id))
+            if (options.UploaderId && !options.UploaderId.SatisfiedBy(id))
             {
-                Log.Warning("Overwriting existing UploaderID filter to {New}", id);
+                Log.Error("Conflicting uploader id. '{Id1}' from url is not included in filter setting {Id2}", id,
+                    options.UploaderId.Filter);
+                throw new LegacyConversionException("Conflicting uploader id from url and song filter setting",
+                    "Mapper Url");
             }
 
             options.UploaderId.Enable = true;
@@ -334,154 +406,228 @@ public static class LegacyPresetLoader
         }
         else
         {
-            Log.Warning("Failed to find uploader id from mapper url: {Url}", url);
+            Log.Error("Failed to find uploader id from mapper url: {Url}", url);
+            throw new LegacyConversionException("Cannot find uploader id from mapper url", "Mapper Url");
         }
     }
 
-    private static DetailOptions ConvertFilterOptions(LegacyPreset.SongFilterSetting setting)
+    private static SongDetailOptions ConvertSongFilterOptions(LegacyPreset.SongFilterSetting setting) => new()
     {
-        return new DetailOptions
+        UploaderId = new IncludeOption<int>
         {
-            UploaderId =
-            {
-                Enable = setting.UploaderIds.Enable,
-                Filter = setting.UploaderIds.Content.ToHashSet()
-            },
-            UploaderName =
-            {
-                Enable = setting.UploaderNames.Enable,
-                Filter = setting.UploaderNames.Content.ToHashSet()
-            },
-            UploadTime = new()
-            {
-                Enable = setting.UploadTime.Enable,
-                Min = setting.UploadTime.Min,
-                Max = setting.UploadTime.Max
-            },
-            IncludeTags = new()
-            {
-                Enable = setting.Tags.Include.Enable,
-                Filter = setting.Tags.Include.Content.ToHashSet(),
-                IsOr = !setting.Tags.Include.And
-            },
-            ExcludeTags =
-            {
-                Enable = setting.Tags.Exclude.Enable,
-                Filter = setting.Tags.Exclude.Content.ToHashSet()
-            },
-            UpVotes = new()
-            {
-                Enable = setting.UpVotes.Enable,
-                Min = setting.UpVotes.Min,
-                Max = setting.UpVotes.Max
-            },
-            UpVotePercentage = new()
-            {
-                Enable = setting.UpVotePercentage.Enable,
-                Min = setting.UpVotePercentage.Min,
-                Max = setting.UpVotePercentage.Max
-            },
-            DownVotes = new()
-            {
-                Enable = setting.DownVotes.Enable,
-                Min = setting.DownVotes.Min,
-                Max = setting.DownVotes.Max
-            },
-            DownVotePercentage = new()
-            {
-                Enable = setting.DownVotePercentage.Enable,
-                Min = setting.DownVotePercentage.Min,
-                Max = setting.DownVotePercentage.Max
-            },
-            Rating = new()
-            {
-                Enable = setting.Rating.Enable,
-                Min = setting.Rating.Min,
-                Max = setting.Rating.Max
-            },
-            IncludeCharacteristics = new()
-            {
-                Enable = setting.IncludeCharacteristics.Enable,
-                Filter = setting.IncludeCharacteristics.Characteristics.Select(EnumConversions.ToMCharacteristic)
-                    .ToHashSet(),
-                IsOr = true
-            },
-            IncludeDifficulties = new()
-            {
-                Enable = setting.IncludeDifficulties.Enable,
-                Filter = setting.IncludeDifficulties.Difficulties.Select(EnumConversions.ToMDifficulty).ToHashSet(),
-                IsOr = !setting.IncludeDifficulties.And
-            },
-            RequireMods = new()
-            {
-                Enable = setting.RequireMods.Enable,
-                Filter = setting.RequireMods.Mods.ToMMods().ToHashSet(),
-                IsOr = true
-            },
-            ExcludeMods =
-            {
-                Enable = setting.ExcludeMods.Enable,
-                Filter = setting.ExcludeMods.Mods.ToMMods()
-            },
-            Bpm = new()
-            {
-                Enable = setting.Bpm.Enable,
-                Min = setting.Bpm.Min,
-                Max = setting.Bpm.Max
-            },
-            Duration = new()
-            {
-                Enable = setting.Duration.Enable,
-                Min = setting.Duration.Min,
-                Max = setting.Duration.Max
-            },
-            Njs = new()
-            {
-                Enable = setting.Njs.Enable,
-                Min = setting.Njs.Min,
-                Max = setting.Njs.Max
-            },
-            Nps = new()
-            {
-                Enable = setting.Nps.Enable,
-                Min = setting.Nps.Min,
-                Max = setting.Nps.Max
-            },
-            Notes = new()
-            {
-                Enable = setting.Notes.Enable,
-                Min = setting.Notes.Min,
-                Max = setting.Notes.Max
-            },
-            Bombs = new()
-            {
-                Enable = setting.Bombs.Enable,
-                Min = setting.Bombs.Min,
-                Max = setting.Bombs.Max
-            },
-            Walls = new()
-            {
-                Enable = setting.Walls.Enable,
-                Min = setting.Walls.Min,
-                Max = setting.Walls.Max
-            },
-            ScoreSaberRanking =
-            {
-                Enable = setting.RankedSong.Enable,
-                Filter = setting.RankedSong.IsRanked
-                    ? new HashSet<RankingStatus> { RankingStatus.Ranked }
-                    : new HashSet<RankingStatus> { RankingStatus.Unranked, RankingStatus.Qualified }
-            },
-            ScoreSaberStars = new()
-            {
-                Enable = setting.Stars.Enable,
-                Min = setting.Stars.Min,
-                Max = setting.Stars.Max
-            },
-            Chinese = new()
-            {
-                Enable = setting.FilterChinese.Enable
-            }
-        };
-    }
+            Enable = setting.UploaderIds.Enable,
+            Filter = setting.UploaderIds.Content.ToHashSet()
+        },
+        UploaderName = new IncludeOption<string>
+        {
+            Enable = setting.UploaderNames.Enable,
+            Filter = setting.UploaderNames.Content.ToHashSet(StringComparer.InvariantCultureIgnoreCase)
+        },
+        Downloads = new RangeOption<int>
+        {
+            Enable = setting.DownloadCount.Enable,
+            Min = setting.DownloadCount.Min,
+            Max = setting.DownloadCount.Max
+        },
+        Plays = new RangeOption<int>
+        {
+            Enable = setting.PlayCount.Enable,
+            Min = setting.PlayCount.Min,
+            Max = setting.PlayCount.Max
+        },
+        UpVotes = new RangeOption<int>
+        {
+            Enable = setting.UpVotes.Enable,
+            Min = setting.UpVotes.Min,
+            Max = setting.UpVotes.Max
+        },
+        UpVotePercentage = new RangeOption<float>
+        {
+            Enable = setting.UpVotePercentage.Enable,
+            Min = setting.UpVotePercentage.Min,
+            Max = setting.UpVotePercentage.Max
+        },
+        DownVotes = new RangeOption<int>
+        {
+            Enable = setting.DownVotes.Enable,
+            Min = setting.DownVotes.Min,
+            Max = setting.DownVotes.Max
+        },
+        DownVotePercentage = new RangeOption<float>
+        {
+            Enable = setting.DownVotePercentage.Enable,
+            Min = setting.DownVotePercentage.Min,
+            Max = setting.DownVotePercentage.Max
+        },
+        Rating = new RangeOption<float>
+        {
+            Enable = setting.Rating.Enable,
+            Min = setting.Rating.Min,
+            Max = setting.Rating.Max
+        },
+        AutoMapper = new Option<bool>(setting.AutoMapper.AutoMapper)
+        {
+            Enable = setting.AutoMapper.Enable
+        },
+        ScoreSaberRanking = new IncludeOption<RankingStatus>
+        {
+            Enable = setting.RankedSong.Enable,
+            Filter = setting.RankedSong.IsRanked
+                ? new HashSet<RankingStatus> { RankingStatus.Ranked }
+                : new HashSet<RankingStatus> { RankingStatus.Unranked, RankingStatus.Qualified }
+        },
+        Chinese = new Option
+        {
+            Enable = setting.FilterChinese.Enable
+        },
+        Bpm = new RangeOption<float>
+        {
+            Enable = setting.Bpm.Enable,
+            Min = setting.Bpm.Min,
+            Max = setting.Bpm.Max
+        },
+        Duration = new RangeOption<int>
+        {
+            Enable = setting.Duration.Enable,
+            Min = setting.Duration.Min,
+            Max = setting.Duration.Max
+        },
+
+        UploadTime = new RangeOption<DateTimeOffset>
+        {
+            Enable = setting.UploadTime.Enable,
+            Min = setting.UploadTime.Min,
+            Max = setting.UploadTime.Max
+        },
+        IncludeTags = new LogicIncludeOption<string>
+        {
+            Enable = setting.Tags.Include.Enable,
+            Filter = setting.Tags.Include.Content.ToHashSet(StringComparer.InvariantCultureIgnoreCase),
+            IsOr = !setting.Tags.Include.And
+        },
+        ExcludeTags = new LogicExcludeOption<string>
+        {
+            Enable = setting.Tags.Exclude.Enable,
+            Filter = setting.Tags.Exclude.Content.ToHashSet(StringComparer.InvariantCultureIgnoreCase),
+            IsOr = !setting.Tags.Exclude.And
+        },
+        SageScore = new RangeOption<int>
+        {
+            Enable = setting.SageScore.Enable,
+            Min = setting.SageScore.Min,
+            Max = setting.SageScore.Max
+        }
+    };
+
+    private static LevelDetailOptions ConvertLevelFilterOptions(LegacyPreset.SongFilterSetting setting) => new()
+    {
+        RequireMods = new LogicIncludeOption<MMod>
+        {
+            Enable = setting.RequireMods.Enable,
+            Filter = setting.RequireMods.Mods.ToMMods(),
+            IsOr = true
+        },
+        ExcludeMods = new ExcludeOption<MMod>
+        {
+            Enable = setting.ExcludeMods.Enable,
+            Filter = setting.ExcludeMods.Mods.ToMMods()
+        },
+        IncludeCharacteristics = new LogicIncludeOption<MCharacteristic>
+        {
+            Enable = setting.IncludeCharacteristics.Enable,
+            Filter = setting.IncludeCharacteristics.Characteristics.Select(EnumConversions.ToMCharacteristic)
+                .ToHashSet(),
+            IsOr = true
+        },
+        IncludeDifficulties = new LogicIncludeOption<MDifficulty>
+        {
+            Enable = setting.IncludeDifficulties.Enable,
+            Filter = setting.IncludeDifficulties.Difficulties.Select(EnumConversions.ToMDifficulty).ToHashSet(),
+            IsOr = !setting.IncludeDifficulties.And
+        },
+        Seconds = new RangeOption<float>
+        {
+            Enable = setting.MapSeconds.Enable,
+            Min = setting.MapSeconds.Min,
+            Max = setting.MapSeconds.Max
+        },
+        Beats = new RangeOption<float>
+        {
+            Enable = setting.MapLength.Enable,
+            Min = setting.MapLength.Min,
+            Max = setting.MapLength.Max
+        },
+        Njs = new RangeOption<float>
+        {
+            Enable = setting.Njs.Enable,
+            Min = setting.Njs.Min,
+            Max = setting.Njs.Max
+        },
+        Offset = new RangeOption<float>
+        {
+            Enable = setting.Offset.Enable,
+            Min = setting.Offset.Min,
+            Max = setting.Offset.Max
+        },
+        Notes = new RangeOption<int>
+        {
+            Enable = setting.Notes.Enable,
+            Min = setting.Notes.Min,
+            Max = setting.Notes.Max
+        },
+        Nps = new RangeOption<float>
+        {
+            Enable = setting.Nps.Enable,
+            Min = setting.Nps.Min,
+            Max = setting.Nps.Max
+        },
+        Bombs = new RangeOption<int>
+        {
+            Enable = setting.Bombs.Enable,
+            Min = setting.Bombs.Min,
+            Max = setting.Bombs.Max
+        },
+        Events = new RangeOption<int>
+        {
+            Enable = setting.Events.Enable,
+            Min = setting.Events.Min,
+            Max = setting.Events.Max
+        },
+        Walls = new RangeOption<int>
+        {
+            Enable = setting.Walls.Enable,
+            Min = setting.Walls.Min,
+            Max = setting.Walls.Max
+        },
+        ScoreSaberStars = new RangeOption<float>
+        {
+            Enable = setting.Stars.Enable,
+            Min = setting.Stars.Min,
+            Max = setting.Stars.Max
+        },
+        ParityErrors = new RangeOption<int>
+        {
+            Enable = setting.ParityErrors.Enable,
+            Min = setting.ParityErrors.Min,
+            Max = setting.ParityErrors.Max
+        },
+        ParityWarns = new RangeOption<int>
+        {
+            Enable = setting.ParityWarns.Enable,
+            Min = setting.ParityWarns.Min,
+            Max = setting.ParityWarns.Max
+        },
+        ParityResets = new RangeOption<int>
+        {
+            Enable = setting.ParityResets.Enable,
+            Min = setting.ParityResets.Min,
+            Max = setting.ParityResets.Max
+        },
+        MaxScore = new RangeOption<int>
+        {
+            Enable = setting.MaxScore.Enable,
+            Min = setting.MaxScore.Min,
+            Max = setting.MaxScore.Max
+        }
+    };
 }

@@ -22,6 +22,9 @@ public record Diff
     [JsonProperty("nps")]
     public float Nps { get; init; }
 
+    /**
+     * The length of the map in beats.
+     */
     [JsonProperty("length")]
     public float Length { get; init; }
 

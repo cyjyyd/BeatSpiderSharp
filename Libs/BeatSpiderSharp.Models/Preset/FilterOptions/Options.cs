@@ -16,6 +16,13 @@ public class Option<T>(T initialValue) : Option
     public T Filter { get; set; } = initialValue;
 }
 
+public class CollectionOption<TCollection, TValue>(TCollection initialValue)
+    : Option where TCollection : ICollection<TValue>
+{
+    [JsonProperty(Order = -89)]
+    public TCollection Filter { get; init; } = initialValue;
+}
+
 public class RangeOption<T> : Option where T : struct, IComparable<T>
 {
     public T? Min { get; set; }
@@ -26,18 +33,28 @@ public class RangeOption<T> : Option where T : struct, IComparable<T>
 }
 
 public abstract class ValueSetOption<T>(IEqualityComparer<T>? comparer = null)
-    : Option<ISet<T>>(new HashSet<T>(comparer));
-
-public class LogicIncludeOption<T>(IEqualityComparer<T>? comparer = null) : ValueSetOption<T>(comparer)
+    : CollectionOption<ISet<T>, T>(new HashSet<T>(comparer));
+//TODO Unit tests
+public abstract class LogicSetOption<T>(IEqualityComparer<T>? comparer = null) : ValueSetOption<T>(comparer)
 {
+    [JsonProperty(Order = -79)]
     public bool IsOr { get; set; }
 
-    public bool SatisfiedBy(ICollection<T> values)
-    {
-        var required = Filter;
-        if (required.Count == 0) return true; // vacuously true
-        return IsOr ? required.Overlaps(values) : required.IsSubsetOf(values);
-    }
+    protected bool TestInclude(ICollection<T> values) => IsOr ? Filter.Overlaps(values) : Filter.IsSubsetOf(values);
+
+    protected abstract bool TestLogic(ICollection<T> values);
+
+    public bool SatisfiedBy(ICollection<T> values) => Filter.Count == 0 || TestLogic(values);
+}
+
+public class LogicIncludeOption<T>(IEqualityComparer<T>? comparer = null) : LogicSetOption<T>(comparer)
+{
+    protected override bool TestLogic(ICollection<T> values) => TestInclude(values);
+}
+
+public class LogicExcludeOption<T>(IEqualityComparer<T>? comparer = null) : LogicSetOption<T>(comparer)
+{
+    protected override bool TestLogic(ICollection<T> values) => !TestInclude(values);
 }
 
 /**
@@ -48,6 +65,9 @@ public class IncludeOption<T>(IEqualityComparer<T>? comparer = null) : ValueSetO
     public bool SatisfiedBy(T value) => Filter.Count == 0 || Filter.Contains(value);
 }
 
+/**
+ * Use to test none of the excluded values is present
+ */
 public class ExcludeOption<T>(IEqualityComparer<T>? comparer = null) : ValueSetOption<T>(comparer)
 {
     public bool SatisfiedBy(ICollection<T> values)

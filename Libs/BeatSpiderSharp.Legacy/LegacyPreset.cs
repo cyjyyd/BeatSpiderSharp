@@ -80,8 +80,14 @@ internal class LegacyPreset
         [JsonProperty("下载方式")]
         public SortType Sort { get; private set; }
 
+        /**
+         * BeatSaver's search API has special logic for this parameter
+         * Disabled: No auto mapped maps
+         * Enabled && True: All maps
+         * Enabled && False: Auto mapped only
+         */
         [JsonProperty("自动生成")]
-        public GeneratedSongSetting GeneratedSong { get; private set; } = new();
+        public AutoMapperSetting AutoMapper { get; private set; } = new();
 
         [JsonProperty("排位曲")]
         public RankedSongSetting RankedSong { get; private set; } = new();
@@ -315,7 +321,7 @@ internal class LegacyPreset
         public MinMaxFloatSetting Rating { get; private set; } = new();
 
         [JsonProperty("自动生成")]
-        public GeneratedSongSetting GeneratedSong { get; private set; } = new();
+        public AutoMapperSetting AutoMapper { get; private set; } = new();
 
         [JsonProperty("排位曲")]
         public RankedSongSetting RankedSong { get; private set; } = new();
@@ -618,14 +624,10 @@ internal class LegacyPreset
         public DateTimeOffset? Max { get; private set; }
     }
 
-    // Original project's settings is weird (but consistent with BeatSaver's API)
-    // Disabled: Human Only
-    // Enabled && True: All
-    // Enabled && False: Generated Only
-    public class GeneratedSongSetting : DisablableSetting
+    public class AutoMapperSetting : DisablableSetting
     {
         [JsonProperty("自动生成")]
-        public bool IncludeGenerated { get; private set; }
+        public bool AutoMapper { get; private set; }
     }
 
     public class RankedSongSetting : DisablableSetting

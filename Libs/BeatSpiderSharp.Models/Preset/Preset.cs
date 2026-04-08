@@ -8,12 +8,12 @@ public class Preset
 
     public string Author { get; set; } = string.Empty;
 
-    public InputConfig Input { get; set; } = new InputConfig();
+    public InputConfig Input { get; init; } = new();
 
-    public OutputConfig Output { get; set; } = new OutputConfig();
+    public OutputConfig Output { get; init; } = new();
 
     /// <summary>
     /// Multiple instances applied as OR
     /// </summary>
-    public IList<FilterConfig> FilterOptions { get; set; } = new List<FilterConfig>(1);
+    public IList<FilterConfig> FilterOptions { get; init; } = new List<FilterConfig>(1);
 }

@@ -26,6 +26,7 @@ internal static class EnumConversions
             LegacyPreset.SongFilterSetting.CharacteristicsFilter.SongCharacteristic.ThreeSixtyDegree => MCharacteristic.ThreeSixtyDegree,
             LegacyPreset.SongFilterSetting.CharacteristicsFilter.SongCharacteristic.Lightshow => MCharacteristic.Lightshow,
             LegacyPreset.SongFilterSetting.CharacteristicsFilter.SongCharacteristic.Lawless => MCharacteristic.Lawless,
+            LegacyPreset.SongFilterSetting.CharacteristicsFilter.SongCharacteristic.Legacy => MCharacteristic.Legacy,
             _ => throw new ArgumentOutOfRangeException(nameof(characteristic), characteristic, "Invalid characteristic")
         };
     }
