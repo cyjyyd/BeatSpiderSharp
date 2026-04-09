@@ -124,6 +124,7 @@ public class PlaylistExporter
 #endif
         var buffer = new MemoryStream();
         await image.SaveAsJpegAsync(buffer, encoder, cToken);
+        buffer.Position = 0;
         return buffer;
     }
 
