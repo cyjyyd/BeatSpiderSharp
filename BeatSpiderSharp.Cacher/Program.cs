@@ -151,10 +151,10 @@ rootCommand.SetAction(async (result, cToken) =>
 });
 
 
-return await CommandLineParser.Parse(rootCommand, args, new CommandLineConfiguration(rootCommand)
+return await CommandLineParser.Parse(rootCommand, args, new()
 {
     EnablePosixBundling = false
-}).InvokeAsync(cTokenSource.Token);
+}).InvokeAsync(cancellationToken: cTokenSource.Token);
 
 
 

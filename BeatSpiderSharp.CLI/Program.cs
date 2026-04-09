@@ -2,21 +2,28 @@
 using System.CommandLine.Parsing;
 using BeatSpiderSharp.CLI.CLIRunners;
 
+var cTokenSource = new CancellationTokenSource();
+Console.CancelKeyPress += (o, e) =>
+{
+    e.Cancel = true;
+    cTokenSource.Cancel();
+};
+
 var rootCommand = new RootCommand();
 new BeatSpiderRunner().SetupCommand(rootCommand);
 
-var commandLineOptions = new CommandLineConfiguration(rootCommand)
+var parsedCommand = CommandLineParser.Parse(rootCommand, args, new()
 {
     EnablePosixBundling = false,
-    EnableDefaultExceptionHandler = false
-};
-
-var parsedCommand = CommandLineParser.Parse(rootCommand, args, commandLineOptions);
+});
 
 var code = 0;
 try
 {
-    code = await parsedCommand.InvokeAsync();
+    code = await parsedCommand.InvokeAsync(new InvocationConfiguration
+    {
+        EnableDefaultExceptionHandler = false
+    }, cTokenSource.Token);
 }
 catch (Exception e)
 {
