@@ -10,8 +10,8 @@ namespace BeatSpiderSharp.Core.SongSource;
 
 public class SongSourceFactory
 {
-    public static IEnumerable<BeatSpiderSong> CreateFromManualSongInput(IList<string> input,
-        IEnumerable<BeatSpiderSong> allSongs)
+    public static IAsyncEnumerable<BeatSpiderSong> CreateFromManualSongInput(IList<string> input,
+        IAsyncEnumerable<BeatSpiderSong> allSongs)
     {
         var bsrSet = new HashSet<string>();
         var hashSet = new HashSet<string>();
@@ -36,13 +36,13 @@ public class SongSourceFactory
             bsrSet.Contains(song.Bsr.ToLowerInvariant()) || hashSet.Contains(song.Hash.ToLowerInvariant()));
     }
 
-    public static IEnumerable<BeatSpiderSong> CreateFromPlaylists(IList<string> playlistPaths,
-        IEnumerable<BeatSpiderSong> allSongs)
+    public static IAsyncEnumerable<BeatSpiderSong> CreateFromPlaylists(IList<string> playlistPaths,
+        IAsyncEnumerable<BeatSpiderSong> allSongs)
     {
         if (playlistPaths.Count == 0)
         {
             Log.Warning("No playlist paths given");
-            return [];
+            return AsyncEnumerable.Empty<BeatSpiderSong>();
         }
 
         var bplistHandler = new LegacyPlaylistHandler();

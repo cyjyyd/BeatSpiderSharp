@@ -34,7 +34,7 @@ public abstract class BeatSpider : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    protected async Task<IEnumerable<BeatSpiderSong>?> FilterSongsAsync(IEnumerable<BeatSpiderSong> songs, Preset preset)
+    protected IAsyncEnumerable<BeatSpiderSong> FilterSongs(IAsyncEnumerable<BeatSpiderSong> songs, Preset preset)
     {
         var detailFilterOptions = preset.FilterOptions;
         if (detailFilterOptions.Count == 0)
@@ -50,7 +50,8 @@ public abstract class BeatSpider : IDisposable
         return songs.Where(song => detailFilters.Any(filter => filter.FilterSong(song)));
     }
 
-    protected int OutputSongs(IEnumerable<BeatSpiderSong> songs, Preset preset, string pathTemplate)
+    protected async Task<int> OutputSongsAsync(IAsyncEnumerable<BeatSpiderSong> songs, Preset preset,
+        string pathTemplate, CancellationToken cToken)
     {
         var output = preset.Output;
         if (output.LimitSongs && output.MaxSongs.HasValue && output.MaxSongs.Value > 0)
@@ -69,7 +70,7 @@ public abstract class BeatSpider : IDisposable
             });
         }
 
-        var consolidated = songs.ToArray();
+        var consolidated = await songs.ToArrayAsync(cToken);
 
         // Process name variables
         var playlistFileName = pathTemplate.Replace("[日期]", DateTime.Today.ToString("yyyy-MM-dd")) + ".bplist";
@@ -89,7 +90,8 @@ public abstract class BeatSpider : IDisposable
         {
             Log.Information("Saving playlist to {Path}", playlistPath);
             var exporter = new PlaylistExporter { PostProcess = output.PostProcessPlaylist };
-            exporter.Export(consolidated, preset.Name, preset.Author, preset.Description, playlistPath);
+            await exporter.ExportAsync(consolidated, preset.Name, preset.Author, preset.Description, playlistPath,
+                cToken);
         }
 
         return consolidated.Length;

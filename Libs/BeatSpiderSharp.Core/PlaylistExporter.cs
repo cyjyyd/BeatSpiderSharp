@@ -17,7 +17,8 @@ public class PlaylistExporter
 {
     public bool PostProcess { get; init; }
 
-    public void Export(IEnumerable<BeatSpiderSong> songs, string title, string author, string? description, string targetPath)
+    public async Task ExportAsync(IEnumerable<BeatSpiderSong> songs, string title, string author, string? description,
+        string targetPath, CancellationToken cToken)
     {
         Log.Information("Exporting playlist {Name}", title);
         var playlist = new LegacyPlaylist(title, title, string.IsNullOrWhiteSpace(author) ? null : author)
@@ -26,7 +27,7 @@ public class PlaylistExporter
             ReadOnly = true
         };
 
-        using var coverStream = GetCover(title);
+        await using var coverStream = await GetCoverAsync(title, cToken);
         playlist.SetCover(coverStream);
 
         // TODO add preset to playlist
@@ -73,11 +74,11 @@ public class PlaylistExporter
         serializer.Serialize(obj, targetPath);
     }
 
-    private static Stream GetCover(string name)
+    private static async Task<Stream> GetCoverAsync(string name, CancellationToken cToken)
     {
         var assembly = Assembly.GetExecutingAssembly();
         var coverStream = assembly.GetManifestResourceStream("BeatSpiderSharp.Core.Assets.cover.png");
-        using var fontStream = assembly.GetManifestResourceStream("BeatSpiderSharp.Core.Assets.font.ttf");
+        await using var fontStream = assembly.GetManifestResourceStream("BeatSpiderSharp.Core.Assets.font.ttf");
         if (coverStream == null || fontStream == null)
         {
             throw new NullReferenceException("Could not find cover.png or font.ttf in resources");
@@ -87,8 +88,8 @@ public class PlaylistExporter
         if (string.IsNullOrWhiteSpace(name)) return coverStream;
 
         // Load image
-        using var image = Image.Load(coverStream);
-        coverStream.Dispose();
+        using var image = await Image.LoadAsync(coverStream, cToken);
+        await coverStream.DisposeAsync();
         
         // Load font
         FontCollection collection = new();
@@ -107,6 +108,7 @@ public class PlaylistExporter
         // Scale font to fit image
         Log.Debug("Scaling font to fit image");
         ScaleFont(name, image, options);
+        cToken.ThrowIfCancellationRequested();
         Log.Debug("Scaled font size: {Size}", options.Font.Size);
 
         // Draw text
@@ -118,10 +120,10 @@ public class PlaylistExporter
         // Save image
         var encoder = new JpegEncoder { Quality = 100 };
 #if DEBUG
-        image.SaveAsJpeg("cover-generated.jpg", encoder);
+        await image.SaveAsJpegAsync("cover-generated.jpg", encoder, cToken);
 #endif
         var buffer = new MemoryStream();
-        image.SaveAsJpeg(buffer, encoder);
+        await image.SaveAsJpegAsync(buffer, encoder, cToken);
         return buffer;
     }
 

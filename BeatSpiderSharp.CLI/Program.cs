@@ -5,6 +5,7 @@ using BeatSpiderSharp.CLI.CLIRunners;
 var cTokenSource = new CancellationTokenSource();
 Console.CancelKeyPress += (o, e) =>
 {
+    Console.WriteLine("Canceling...");
     e.Cancel = true;
     cTokenSource.Cancel();
 };
@@ -20,10 +21,7 @@ var parsedCommand = CommandLineParser.Parse(rootCommand, args, new()
 var code = 0;
 try
 {
-    code = await parsedCommand.InvokeAsync(new InvocationConfiguration
-    {
-        EnableDefaultExceptionHandler = false
-    }, cTokenSource.Token);
+    code = await parsedCommand.InvokeAsync(cancellationToken: cTokenSource.Token);
 }
 catch (Exception e)
 {

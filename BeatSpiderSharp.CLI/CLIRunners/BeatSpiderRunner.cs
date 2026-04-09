@@ -110,6 +110,6 @@ internal class BeatSpiderRunner : RunnerBase
 
         using var beatSpider = new BeatSpiderCLI(options.Verbose);
 
-        return await beatSpider.Run(options);
+        return await beatSpider.RunAsync(options, cancellationToken);
     }
 }

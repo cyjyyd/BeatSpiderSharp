@@ -34,7 +34,7 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
             .WriteTo.Console();
     }
 
-    public async Task<int> Run(BeatSpiderOptions options)
+    public async Task<int> RunAsync(BeatSpiderOptions options, CancellationToken cToken)
     {
         Log.Information("BeatSpiderCLI!");
 
@@ -72,11 +72,15 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
                 return -1;
             }
 
+            cToken.ThrowIfCancellationRequested();
+
             if (!string.IsNullOrWhiteSpace(options.SaveConvertedPresetPath))
             {
                 Log.Information("Saving converted preset");
                 PresetLoader.SavePreset(preset, options.SaveConvertedPresetPath);
             }
+
+            cToken.ThrowIfCancellationRequested();
 
             if (options.ConvertPresetAndExit)
             {
@@ -95,6 +99,7 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
         else
         {
             var p = PresetLoader.LoadPreset(options.InputPreset);
+            cToken.ThrowIfCancellationRequested();
 
             if (p == null)
             {
@@ -147,8 +152,7 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
 
         Log.Information("Loading song inputs");
         var allSongs = serializer
-            .DeserializeArrayAsync<Song>(jsonReader, ["docs"])
-            .ToBlockingEnumerable() //TODO async enumerable
+            .DeserializeArrayAsync<Song>(jsonReader, ["docs"], cToken)
             .Where(BeatSpiderSong.ValidateBeatSaverSong)
             .Select(song => BeatSpiderSong.FromBeatSaverSong(song!));
 
@@ -159,17 +163,12 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
                 allSongs),
             _ => allSongs
         };
-        
+
         Log.Information("Starting filtering for preset: {Preset}", preset.Name);
-        var filteredSongs = await FilterSongsAsync(allSongs, preset);
-        if (filteredSongs == null)
-        {
-            Log.Error("Failed to filter songs");
-            return -1;
-        }
+        var filteredSongs = FilterSongs(allSongs, preset);
 
         var pathTemplate = Path.GetFileNameWithoutExtension(options.InputPreset);
-        var count = OutputSongs(filteredSongs, preset, pathTemplate);
+        var count = await OutputSongsAsync(filteredSongs, preset, pathTemplate, cToken);
         Log.Information("Filtered songs: {Count}", count);
         return 0;
     }
