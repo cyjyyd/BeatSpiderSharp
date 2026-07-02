@@ -629,16 +629,39 @@ public static partial class LegacyPresetLoader
 
     private static readonly char[] NewLines = ['\n', '\r'];
 
-    private static SearchOptions ConvertSearchFilterOptions(LegacyPreset.SearchFilterSetting setting) => new()
+    private static SearchOptions ConvertSearchFilterOptions(LegacyPreset.SearchFilterSetting setting)
     {
-        Enable = setting.SearchEnabled,
-        SearchTerms = setting.SearchContent
-            .Split(NewLines, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList(),
-        RegexSearch = setting.RegexSearch,
-        SearchTitle = setting.SearchTitle,
-        SearchSongName = setting.SearchSongName,
-        SearchAuthor = setting.SearchAuthor,
-        SearchMapper = setting.SearchMapper,
-        SearchDescription = setting.SearchDescription
-    };
+        var rawLines = setting.SearchContent
+            .Split(NewLines, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        return new SearchOptions
+        {
+            Enable = setting.SearchEnabled,
+            RegexPatterns = setting.RegexSearch ? rawLines.ToList() : [],
+            AdvanceTerms = setting.RegexSearch ? [] : rawLines.Select(ParseSearchTerm).ToList(),
+            SearchTitle = setting.SearchTitle,
+            SearchSongName = setting.SearchSongName,
+            SearchAuthor = setting.SearchAuthor,
+            SearchMapper = setting.SearchMapper,
+            SearchDescription = setting.SearchDescription
+        };
+    }
+
+    /// <summary>
+    ///     Parses a single legacy advanced-search line of the form <c>content|excl1,excl2</c>. The exclusion
+    ///     segment is optional; the split on <c>|</c> is bounded to 2 parts so any stray pipe in the exclusion
+    ///     segment is preserved as-is.
+    /// </summary>
+    private static AdvanceSearchTerm ParseSearchTerm(string raw)
+    {
+        var parts = raw.Split('|', 2);
+        var exclusions = parts.Length == 2
+            ? parts[1].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()
+            : [];
+        return new AdvanceSearchTerm
+        {
+            Content = parts[0],
+            Exclusions = exclusions
+        };
+    }
 }

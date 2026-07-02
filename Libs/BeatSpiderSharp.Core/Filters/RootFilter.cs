@@ -13,7 +13,12 @@ public class RootFilter : ISongFilter
     public RootFilter(FilterConfig config)
     {
         _config = config;
-        _filters = [new SongDetailFilter(_config.SongDetailFilter), new LevelDetailFilter(_config.LevelDetailOptions)];
+        _filters =
+        [
+            new SongDetailFilter(_config.SongDetailFilter),
+            new LevelDetailFilter(_config.LevelDetailOptions),
+            new SearchFilter(_config.SearchOptions)
+        ];
     }
 
     public bool FilterSong(BeatSpiderSong song)
