@@ -69,35 +69,35 @@ public class SearchFilter : ISongFilter
         var haystack = new List<string>(5);
         if (_options.SearchTitle && !string.IsNullOrWhiteSpace(map.Name))
         {
-            haystack.Add(map.Name);
+            haystack.Add(map.Name.ToLowerInvariant());
         }
 
         if (_options.SearchSongName)
         {
             if (!string.IsNullOrWhiteSpace(meta?.SongName))
             {
-                haystack.Add(meta.SongName);
+                haystack.Add(meta.SongName.ToLowerInvariant());
             }
 
             if (!string.IsNullOrWhiteSpace(meta?.SongSubName))
             {
-                haystack.Add(meta.SongSubName);
+                haystack.Add(meta.SongSubName.ToLowerInvariant());
             }
         }
 
         if (_options.SearchAuthor && !string.IsNullOrWhiteSpace(meta?.SongAuthorName))
         {
-            haystack.Add(meta.SongAuthorName);
+            haystack.Add(meta.SongAuthorName.ToLowerInvariant());
         }
 
         if (_options.SearchMapper && !string.IsNullOrWhiteSpace(meta?.LevelAuthorName))
         {
-            haystack.Add(meta.LevelAuthorName);
+            haystack.Add(meta.LevelAuthorName.ToLowerInvariant());
         }
 
         if (_options.SearchDescription && !string.IsNullOrWhiteSpace(map.Description))
         {
-            haystack.Add(map.Description);
+            haystack.Add(map.Description.ToLowerInvariant());
         }
 
         if (haystack.Count == 0) return true;
@@ -115,19 +115,18 @@ public class SearchFilter : ISongFilter
     }
 
     /// <summary>
-    ///     Returns true if <paramref name="term" />'s content occurs in <paramref name="text" /> at a position that
-    ///     is not covered by any exclusion word. Iterates every occurrence and returns on the first uncovered one.
-    ///     <paramref name="term" /> is expected to hold pre-lowercased strings.
+    ///     Returns true if <paramref name="term" />'s content occurs in <paramref name="lowerText" /> at a position
+    ///     that is not covered by any exclusion word. Iterates every occurrence and returns on the first uncovered
+    ///     one. Both <paramref name="term" /> and <paramref name="lowerText" /> are expected to be pre-lowercased.
     /// </summary>
-    private static bool MatchesAdvance(AdvanceSearchTerm term, string text)
+    private static bool MatchesAdvance(AdvanceSearchTerm term, string lowerText)
     {
         if (string.IsNullOrWhiteSpace(term.Content)) return false;
-        var lower = text.ToLowerInvariant();
-        var idx = lower.IndexOf(term.Content, StringComparison.Ordinal);
+        var idx = lowerText.IndexOf(term.Content, StringComparison.Ordinal);
         while (idx >= 0)
         {
-            if (!CoveredByExclusion(term, lower, idx)) return true;
-            idx = lower.IndexOf(term.Content, idx + 1, StringComparison.Ordinal);
+            if (!CoveredByExclusion(term, lowerText, idx)) return true;
+            idx = lowerText.IndexOf(term.Content, idx + 1, StringComparison.Ordinal);
         }
 
         return false;
