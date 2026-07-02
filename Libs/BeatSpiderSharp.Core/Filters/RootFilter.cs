@@ -15,9 +15,9 @@ public class RootFilter : ISongFilter
         _config = config;
         _filters =
         [
+            new SearchFilter(_config.SearchOptions),
             new SongDetailFilter(_config.SongDetailFilter),
-            new LevelDetailFilter(_config.LevelDetailOptions),
-            new SearchFilter(_config.SearchOptions)
+            new LevelDetailFilter(_config.LevelDetailOptions)
         ];
     }
 
