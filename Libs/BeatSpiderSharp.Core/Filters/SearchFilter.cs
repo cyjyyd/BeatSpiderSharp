@@ -62,8 +62,7 @@ public class SearchFilter : ISongFilter
 
     public bool FilterSong(BeatSpiderSong song)
     {
-        if (!_options) return true;
-
+        if (!_options || (_advanceTerms.Count == 0 && _regexTerms.Count == 0)) return true;
         var map = song.BeatSaverSong;
         var meta = map.Metadata;
 
