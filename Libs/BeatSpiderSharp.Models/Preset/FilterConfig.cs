@@ -7,4 +7,6 @@ public class FilterConfig
     public SongDetailOptions SongDetailFilter { get; init; } = new();
 
     public LevelDetailOptions LevelDetailOptions { get; init; } = new();
+
+    public SearchOptions SearchOptions { get; init; } = new();
 }

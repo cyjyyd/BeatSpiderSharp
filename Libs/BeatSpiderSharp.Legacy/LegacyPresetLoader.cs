@@ -63,6 +63,7 @@ public static partial class LegacyPresetLoader
         WarnUnsupported(legacyPreset);
         var songOptions = ConvertSongFilterOptions(legacyPreset.SongFilter);
         var levelOptions = ConvertLevelFilterOptions(legacyPreset.SongFilter);
+        var searchOptions = ConvertSearchFilterOptions(legacyPreset.SearchFilter);
         var output = new OutputConfig
         {
             LimitSongs = legacyPreset.Limits.Count.Enable,
@@ -88,7 +89,8 @@ public static partial class LegacyPresetLoader
         var filterConfig = new FilterConfig
         {
             SongDetailFilter = songOptions,
-            LevelDetailOptions = levelOptions
+            LevelDetailOptions = levelOptions,
+            SearchOptions = searchOptions
         };
         Log.Debug("Legacy preset input source: {Source}", legacyPreset.SongSource);
         switch (legacyPreset.SongSource)
@@ -168,12 +170,6 @@ public static partial class LegacyPresetLoader
     
     private static void WarnUnsupported(LegacyPreset preset)
     {
-        if (preset.SearchFilter.SearchEnabled)
-        {
-            //TODO
-            throw new LegacyConversionException("Search filter is not implemented");
-        }
-        
         if (preset.ThumbnailTag.Enable.Enable)
         {
             throw new LegacyConversionException("Thumbnail Tag is not supported");
@@ -629,5 +625,20 @@ public static partial class LegacyPresetLoader
             Min = setting.MaxScore.Min,
             Max = setting.MaxScore.Max
         }
+    };
+
+    private static readonly char[] NewLines = ['\n', '\r'];
+
+    private static SearchOptions ConvertSearchFilterOptions(LegacyPreset.SearchFilterSetting setting) => new()
+    {
+        Enable = setting.SearchEnabled,
+        SearchTerms = setting.SearchContent
+            .Split(NewLines, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList(),
+        RegexSearch = setting.RegexSearch,
+        SearchTitle = setting.SearchTitle,
+        SearchSongName = setting.SearchSongName,
+        SearchAuthor = setting.SearchAuthor,
+        SearchMapper = setting.SearchMapper,
+        SearchDescription = setting.SearchDescription
     };
 }
