@@ -388,7 +388,7 @@ public static partial class LegacyPresetLoader
         var match = MapperUrlRegex().Match(url);
         if (match is { Success: true, Groups.Count: 2 } && int.TryParse(match.Groups[1].Value, out var id))
         {
-            Log.Information("Found uploader id from mapper url: {Url}", url);
+            Log.Information("Found uploader id from mapper url: {Url}", id);
             if (options.UploaderId && !options.UploaderId.SatisfiedBy(id))
             {
                 Log.Error("Conflicting uploader id. '{Id1}' from url is not included in filter setting {Id2}", id,
