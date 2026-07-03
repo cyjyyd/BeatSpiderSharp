@@ -1,14 +1,16 @@
 #!/usr/bin/env pwsh
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true, Position = 0)]
+    [Parameter(Mandatory = $true)]
     [string]$Path,
 
-    [Parameter(Mandatory = $true, Position = 1)]
+    [Parameter(Mandatory = $true)]
     [string]$SourceCache,
 
-    [Parameter(Mandatory = $true, Position = 2)]
-    [string]$PresetAuthor
+    [Parameter(Mandatory = $true)]
+    [string]$PresetAuthor,
+
+    [switch]$ConvertOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -36,14 +38,28 @@ $workDir = Join-Path $PWD 'run-output'
 New-Item -ItemType Directory -Force -Path $workDir | Out-Null
 
 $cliProject = Join-Path $PSScriptRoot 'BeatSpiderSharp.CLI'
-
+dotnet build $cliProject
+if ($LASTEXITCODE -ne 0)
+{
+    throw ("dotnet build failed, exit code $LASTEXITCODE")
+}
 Push-Location -LiteralPath $workDir
 try
 {
     foreach ($preset in $presets)
     {
         Write-Host "`n=== Running: $( $preset.Name ) ==="
-        dotnet run --project $cliProject -- -s $SourceCache -z -i $preset.FullName --legacy --save-preset "./$( $preset.BaseName ).json" --preset-author $PresetAuthor -D -o './'
+        $cliArgs = @('-s', $SourceCache, '-z', '-i', $preset.FullName, '--legacy', '--save-preset', "./$( $preset.BaseName ).json", '--preset-author', $PresetAuthor, '-D', '-o', './')
+        if ($ConvertOnly)
+        {
+            $cliArgs += '--convert-only'
+        }
+        dotnet run --project $cliProject --no-build -- @cliArgs
+
+        if ($LASTEXITCODE -ne 0)
+        {
+            throw ("BeatSpiderSharp.CLI exited with code $LASTEXITCODE")
+        }
     }
 }
 finally
