@@ -1,10 +1,14 @@
-﻿namespace BeatSpiderSharp.Models.Preset;
+﻿using BeatSpiderSharp.Models.Enums;
+
+namespace BeatSpiderSharp.Models.Preset;
 
 public class OutputConfig
 {
     public bool LimitSongs { get; set; }
 
     public int? MaxSongs { get; set; }
+
+    public SortType SortType { get; set; } = SortType.Latest;
 
     public bool SavePlaylist { get; set; }
     

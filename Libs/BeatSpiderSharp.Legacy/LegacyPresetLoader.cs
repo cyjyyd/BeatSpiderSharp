@@ -117,6 +117,14 @@ public static partial class LegacyPresetLoader
             case LegacyPreset.DataSource.BeatSaver:
                 MergeBeatSaverSetting(filterConfig, legacyPreset.BeatSaver);
                 input.Source = SongInputSource.BeatSaver;
+                output.SortType = legacyPreset.BeatSaver.Sort switch
+                {
+                    LegacyPreset.BeatSaverSetting.SortType.Latest => SortType.Latest,
+                    LegacyPreset.BeatSaverSetting.SortType.Rating => SortType.Rating,
+                    _ => throw new LegacyConversionException(
+                        $"Only {nameof(LegacyPreset.BeatSaverSetting.SortType.Latest)} and {nameof(LegacyPreset.BeatSaverSetting.SortType.Rating)} BeatSaver search sort types are supported",
+                        "BeatSaver Search")
+                };
                 break;
             default:
                 throw new LegacyConversionException(
@@ -211,13 +219,6 @@ public static partial class LegacyPresetLoader
         {
             //TODO add search keyword to search filter settings once search filter is supported
             throw new LegacyConversionException("BeatSaver search keyword and starting page are not supported",
-                "BeatSaver Search");
-        }
-
-        if (setting.Sort != LegacyPreset.BeatSaverSetting.SortType.Latest)
-        {
-            throw new LegacyConversionException(
-                $"Only {nameof(LegacyPreset.BeatSaverSetting.SortType.Latest)} BeatSaver search sort type is supported",
                 "BeatSaver Search");
         }
 

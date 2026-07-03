@@ -1,5 +1,6 @@
 ﻿using BeatSpiderSharp.Core.Filters;
 using BeatSpiderSharp.Models;
+using BeatSpiderSharp.Models.Enums;
 using BeatSpiderSharp.Models.Preset;
 using Serilog;
 
@@ -54,6 +55,12 @@ public abstract class BeatSpider : IDisposable
         string pathTemplate, CancellationToken cToken)
     {
         var output = preset.Output;
+        if (output.SortType == SortType.Rating)
+        {
+            Log.Information("Sorting songs by rating");
+            songs = songs.OrderByDescending(song => song.BeatSaverSong.Stats?.Score);
+        }
+        
         if (output.LimitSongs && output.MaxSongs.HasValue && output.MaxSongs.Value > 0)
         {
             Log.Information("Applying count limit: {Count}", output.MaxSongs.Value);
@@ -62,12 +69,27 @@ public abstract class BeatSpider : IDisposable
 
         if (Verbose)
         {
-            songs = songs.Select(song =>
+            if (output.SortType == SortType.Rating)
             {
-                Log.Verbose("Song {Bsr} ({Title} - {Mapper}) included", song.Bsr, song.BeatSaverSong.Metadata?.SongName,
-                    song.BeatSaverSong.Uploader?.Name);
-                return song;
-            });
+                songs = songs.Select(song =>
+                {
+                    Log.Verbose("Song {Bsr} ({Title} - {Mapper}) included at {Rating:P} rating",
+                        song.Bsr,
+                        song.BeatSaverSong.Metadata?.SongName,
+                        song.BeatSaverSong.Uploader?.Name, song.BeatSaverSong.Stats?.Score);
+                    return song;
+                });
+            }
+            else
+            {
+                songs = songs.Select(song =>
+                {
+                    Log.Verbose("Song {Bsr} ({Title} - {Mapper}) included", song.Bsr,
+                        song.BeatSaverSong.Metadata?.SongName,
+                        song.BeatSaverSong.Uploader?.Name);
+                    return song;
+                });
+            }
         }
 
         var consolidated = await songs.ToArrayAsync(cToken);
