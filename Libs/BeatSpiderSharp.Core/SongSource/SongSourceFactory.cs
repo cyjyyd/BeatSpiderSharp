@@ -53,8 +53,7 @@ public class SongSourceFactory
             Log.Debug("Loading playlist: {PlaylistPath}", path);
             if (!File.Exists(path))
             {
-                Log.Warning("Playlist file not found: {PlaylistPath}", path);
-                continue;
+                throw new FileNotFoundException("Playlist file not found", path);
             }
 
             var extension = Path.GetExtension(path);
