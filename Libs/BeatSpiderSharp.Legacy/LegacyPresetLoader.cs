@@ -63,6 +63,7 @@ public static partial class LegacyPresetLoader
         WarnUnsupported(legacyPreset);
         var songOptions = ConvertSongFilterOptions(legacyPreset.SongFilter);
         var levelOptions = ConvertLevelFilterOptions(legacyPreset.SongFilter);
+        var searchOptions = ConvertSearchFilterOptions(legacyPreset.SearchFilter);
         var output = new OutputConfig
         {
             LimitSongs = legacyPreset.Limits.Count.Enable,
@@ -88,7 +89,8 @@ public static partial class LegacyPresetLoader
         var filterConfig = new FilterConfig
         {
             SongDetailFilter = songOptions,
-            LevelDetailOptions = levelOptions
+            LevelDetailOptions = levelOptions,
+            SearchOptions = searchOptions
         };
         Log.Debug("Legacy preset input source: {Source}", legacyPreset.SongSource);
         switch (legacyPreset.SongSource)
@@ -168,12 +170,6 @@ public static partial class LegacyPresetLoader
     
     private static void WarnUnsupported(LegacyPreset preset)
     {
-        if (preset.SearchFilter.SearchEnabled)
-        {
-            //TODO
-            throw new LegacyConversionException("Search filter is not implemented");
-        }
-        
         if (preset.ThumbnailTag.Enable.Enable)
         {
             throw new LegacyConversionException("Thumbnail Tag is not supported");
@@ -630,4 +626,42 @@ public static partial class LegacyPresetLoader
             Max = setting.MaxScore.Max
         }
     };
+
+    private static readonly char[] NewLines = ['\n', '\r'];
+
+    private static SearchOptions ConvertSearchFilterOptions(LegacyPreset.SearchFilterSetting setting)
+    {
+        var rawLines = setting.SearchContent
+            .Split(NewLines, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        return new SearchOptions
+        {
+            Enable = setting.SearchEnabled,
+            RegexPatterns = setting.RegexSearch ? rawLines.ToList() : [],
+            AdvanceTerms = setting.RegexSearch ? [] : rawLines.Select(ParseSearchTerm).ToList(),
+            SearchTitle = setting.SearchTitle,
+            SearchSongName = setting.SearchSongName,
+            SearchAuthor = setting.SearchAuthor,
+            SearchMapper = setting.SearchMapper,
+            SearchDescription = setting.SearchDescription
+        };
+    }
+
+    /// <summary>
+    ///     Parses a single legacy advanced-search line of the form <c>content|excl1,excl2</c>. The exclusion
+    ///     segment is optional; the split on <c>|</c> is bounded to 2 parts so any stray pipe in the exclusion
+    ///     segment is preserved as-is.
+    /// </summary>
+    private static AdvanceSearchTerm ParseSearchTerm(string raw)
+    {
+        var parts = raw.Split('|', 2);
+        var exclusions = parts.Length == 2
+            ? parts[1].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()
+            : [];
+        return new AdvanceSearchTerm
+        {
+            Content = parts[0],
+            Exclusions = exclusions
+        };
+    }
 }
