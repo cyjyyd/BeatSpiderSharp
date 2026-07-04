@@ -108,12 +108,16 @@ public abstract class BeatSpider : IDisposable
                 cToken);
         }
 
-        // TODO
-        // if (output.SongDownload.DownloadSongs)
-        // {
-        //     Log.Information("Downloading songs to {Path}", output.SongDownload.DownloadPath);
-        //     Parallel.
-        // }
+        if (output.SongDownload.DownloadSongs)
+        {
+            using var songDownloader = new SongDownloader(output.SongDownload);
+            var failed = await songDownloader.DownloadSongs(consolidated, cToken);
+            if (failed.Count > 0)
+            {
+                Log.Warning("Failed to download {Count} songs", failed.Count);
+                Log.Warning("Failed to download songs: {Failed}", failed);
+            }
+        }
 
         return consolidated.Length;
     }
