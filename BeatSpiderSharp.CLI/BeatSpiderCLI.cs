@@ -167,8 +167,7 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
         Log.Information("Starting filtering for preset: {Preset}", preset.Name);
         var filteredSongs = FilterSongs(allSongs, preset);
 
-        var pathTemplate = Path.GetFileNameWithoutExtension(options.InputPreset);
-        var count = await OutputSongsAsync(filteredSongs, preset, pathTemplate, cToken);
+        var count = await OutputSongsAsync(filteredSongs, preset, cToken);
         Log.Information("Filtered songs: {Count}", count);
         return 0;
     }
@@ -180,57 +179,59 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
         var output = preset.Output;
         if (options.DisablePlaylistOutput)
         {
-            output.SavePlaylist = false;
+            output.Playlist.SavePlaylist = false;
         }
-        else if (output.SavePlaylist)
+        else if (output.Playlist.SavePlaylist)
         {
             if (!string.IsNullOrWhiteSpace(options.OutputPlaylist))
             {
-                output.PlaylistPath = options.OutputPlaylist;
+                output.Playlist.PlaylistDirectory = options.OutputPlaylist;
             }
 
-            output.SavePlaylist = !string.IsNullOrWhiteSpace(output.PlaylistPath);
+            output.Playlist.SavePlaylist = !string.IsNullOrWhiteSpace(output.Playlist.PlaylistDirectory);
         }
 
         if (options.DisableSongDownload)
         {
-            output.DownloadSongs = false;
+            output.SongDownload.DownloadSongs = false;
         }
-        else if (output.DownloadSongs)
+        else if (output.SongDownload.DownloadSongs)
         {
             if (!string.IsNullOrWhiteSpace(options.OutputSongPath))
             {
-                output.DownloadPath = options.OutputSongPath;
+                output.SongDownload.DownloadPath = options.OutputSongPath;
             }
 
-            output.DownloadSongs = !string.IsNullOrWhiteSpace(output.DownloadPath);
+            output.SongDownload.DownloadSongs = !string.IsNullOrWhiteSpace(output.SongDownload.DownloadPath);
         }
     }
 
     private bool VerifyOutput(OutputConfig output)
     {
-        if (output.SavePlaylist)
+        if (output.Playlist.SavePlaylist)
         {
-            if (string.IsNullOrWhiteSpace(output.PlaylistPath))
+            if (string.IsNullOrWhiteSpace(output.Playlist.PlaylistDirectory))
             {
                 Log.Warning("Playlist output is enabled but no path is specified");
             }
-            else if (!Directory.Exists(output.PlaylistPath))
+            else if (!Directory.Exists(output.Playlist.PlaylistDirectory))
             {
-                Log.Error("Playlist output path doesn't exist or is not a directory: {Path}", output.PlaylistPath);
+                Log.Error("Playlist output path doesn't exist or is not a directory: {Path}",
+                    output.Playlist.PlaylistDirectory);
                 return false;
             }
         }
 
-        if (output.DownloadSongs)
+        if (output.SongDownload.DownloadSongs)
         {
-            if (string.IsNullOrWhiteSpace(output.DownloadPath))
+            if (string.IsNullOrWhiteSpace(output.SongDownload.DownloadPath))
             {
                 Log.Warning("Song download is enabled but no path is specified");
             }
-            else if (!Directory.Exists(output.DownloadPath))
+            else if (!Directory.Exists(output.SongDownload.DownloadPath))
             {
-                Log.Error("Song download path doesn't exist or is not a directory: {Path}", output.DownloadPath);
+                Log.Error("Song download path doesn't exist or is not a directory: {Path}",
+                    output.SongDownload.DownloadPath);
                 return false;
             }
         }

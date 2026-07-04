@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text.RegularExpressions;
 using BeatSpiderSharp.Extensions;
+using BeatSpiderSharp.Models;
 using BeatSpiderSharp.Models.Enums;
 using BeatSpiderSharp.Models.Preset;
 using BeatSpiderSharp.Models.Preset.FilterOptions;
@@ -68,15 +69,24 @@ public static partial class LegacyPresetLoader
         {
             LimitSongs = legacyPreset.Limits.Count.Enable,
             MaxSongs = legacyPreset.Limits.Count.Content,
-            SavePlaylist = legacyPreset.Output.Playlist.Enable,
-            PostProcessPlaylist = true,
-            PlaylistPath = legacyPreset.Output.Playlist.Path,
-            DownloadSongs = legacyPreset.Output.Songs.Enable,
-            DownloadPath = legacyPreset.Output.Songs.Path,
-            SkipExisting = true,
-            ExistingSongPaths = legacyPreset.LocalSong.LocalSongSkipPaths.ToList(),
-            CopyLocalSongs = true,
-            LocalSongPaths = legacyPreset.LocalSong.LocalSongPaths.ToList()
+            Playlist = new PlaylistConfig
+            {
+                SavePlaylist = legacyPreset.Output.Playlist.Enable,
+                PostProcessPlaylist = true,
+                PlaylistDirectory = legacyPreset.Output.Playlist.Path,
+                FileNameTemplate = GetPlaylistFileTemplate(fileName)
+            },
+            SongDownload = new SongDownloadConfig
+            {
+                DownloadSongs = legacyPreset.Output.Songs.Enable,
+                DownloadPath = legacyPreset.Output.Songs.Path,
+                FolderNameTemplate = ConvertSongFolderTemplate(legacyPreset.Output.Naming.Template),
+                EnglishOnly = legacyPreset.Output.Naming.AllEnglish,
+                SkipExisting = true,
+                ExistingSongPaths = legacyPreset.LocalSong.LocalSongSkipPaths.ToList(),
+                CopyLocalSongs = true,
+                LocalSongPaths = legacyPreset.LocalSong.LocalSongPaths.ToList()
+            }
         };
         var input = new InputConfig
         {
@@ -138,7 +148,7 @@ public static partial class LegacyPresetLoader
             Name = name,
             Author = author,
             Description = $"该歌单由免费工具 BeatSpider (BeatSpiderSharp) 生成。\n\n" +
-                          $"源项目地址（已停止更新）：https://github.com/WGzeyu/BeatSpider\n" + 
+                          $"源项目地址（已停止更新）：https://github.com/WGzeyu/BeatSpider\n" +
                           $"重制版项目地址：https://github.com/qe201020335/BeatSpiderSharp",
             Input = input,
             Output = output,
@@ -151,7 +161,19 @@ public static partial class LegacyPresetLoader
 #endif
         return preset;
     }
-    
+
+    private static string GetPlaylistFileTemplate(string fileName) => fileName
+        .Replace(LegacyTemplates.DATE, Templates.DATE, StringComparison.OrdinalIgnoreCase);
+
+    private static string ConvertSongFolderTemplate(string template) => template
+        .Replace(LegacyTemplates.BSR, Templates.BSR, StringComparison.OrdinalIgnoreCase)
+        .Replace(LegacyTemplates.HASH, Templates.HASH, StringComparison.OrdinalIgnoreCase)
+        .Replace(LegacyTemplates.TITLE, Templates.TITLE, StringComparison.OrdinalIgnoreCase)
+        .Replace(LegacyTemplates.SONG_NAME, Templates.SONG_NAME, StringComparison.OrdinalIgnoreCase)
+        .Replace(LegacyTemplates.SONG_SUB_NAME, Templates.SONG_SUB_NAME, StringComparison.OrdinalIgnoreCase)
+        .Replace(LegacyTemplates.SONG_AUTHOR, Templates.SONG_AUTHOR, StringComparison.OrdinalIgnoreCase)
+        .Replace(LegacyTemplates.MAPPER, Templates.MAPPER, StringComparison.OrdinalIgnoreCase);
+
     private static string GetPresetName(string fileName)
     {
         if (string.IsNullOrWhiteSpace(fileName))
@@ -165,17 +187,17 @@ public static partial class LegacyPresetLoader
         {
             return fileName;
         }
-        
+
         var rightBracket = fileName[leftBracket..].IndexOf('】');
         if (rightBracket == -1)
         {
             return fileName;
         }
-        
+
         var name = fileName[(leftBracket + 1)..(rightBracket + leftBracket)];
         return string.IsNullOrWhiteSpace(name) ? fileName : name;
     }
-    
+
     private static void WarnUnsupported(LegacyPreset preset)
     {
         if (preset.ThumbnailTag.Enable.Enable)

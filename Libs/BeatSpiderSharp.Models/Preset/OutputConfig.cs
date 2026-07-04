@@ -10,20 +10,36 @@ public class OutputConfig
 
     public SortType SortType { get; set; } = SortType.Latest;
 
+    public PlaylistConfig Playlist { get; init; } = new();
+
+    public SongDownloadConfig SongDownload { get; init; } = new();
+}
+
+public class PlaylistConfig
+{
     public bool SavePlaylist { get; set; }
-    
+
     public bool PostProcessPlaylist { get; set; }
 
-    public string PlaylistPath { get; set; } = string.Empty;
+    public string PlaylistDirectory { get; set; } = string.Empty;
 
+    public string FileNameTemplate { get; set; } = string.Empty;
+}
+
+public class SongDownloadConfig
+{
     public bool DownloadSongs { get; set; }
 
     public string DownloadPath { get; set; } = string.Empty;
 
+    public string FolderNameTemplate { get; set; } = $"{Templates.BSR} ({Templates.SONG_NAME} - {Templates.MAPPER})";
+
+    public bool EnglishOnly { get; set; }
+
     public bool SkipExisting { get; set; }
 
     public IList<string> ExistingSongPaths { get; init; } = new List<string>();
-    
+
     public bool CopyLocalSongs { get; set; }
 
     public IList<string> LocalSongPaths { get; init; } = new List<string>();

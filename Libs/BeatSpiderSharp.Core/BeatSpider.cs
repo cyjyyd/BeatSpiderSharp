@@ -1,4 +1,5 @@
 ﻿using BeatSpiderSharp.Core.Filters;
+using BeatSpiderSharp.Extensions;
 using BeatSpiderSharp.Models;
 using BeatSpiderSharp.Models.Enums;
 using BeatSpiderSharp.Models.Preset;
@@ -52,7 +53,7 @@ public abstract class BeatSpider : IDisposable
     }
 
     protected async Task<int> OutputSongsAsync(IAsyncEnumerable<BeatSpiderSong> songs, Preset preset,
-        string pathTemplate, CancellationToken cToken)
+        CancellationToken cToken)
     {
         var output = preset.Output;
         if (output.SortType == SortType.Rating)
@@ -94,27 +95,25 @@ public abstract class BeatSpider : IDisposable
 
         var consolidated = await songs.ToArrayAsync(cToken);
 
-        // Process name variables
-        var playlistFileName = pathTemplate.Replace("[日期]", DateTime.Today.ToString("yyyy-MM-dd")) + ".bplist";
-        var playlistPath = Path.Combine(output.PlaylistPath, playlistFileName);
-        var songPath = Path.Combine(output.DownloadPath, pathTemplate);  // no replacement on song path
-
-        // TODO
-        // if (output.DownloadSongs)
-        // {
-        //     Log.Information("Querying BeatSaver for map download info");
-        //     
-        //     Log.Information("Downloading songs to {Path}", songPath);
-        //     Parallel.
-        // }
-
-        if (output.SavePlaylist)
+        if (output.Playlist.SavePlaylist)
         {
-            Log.Information("Saving playlist to {Path}", playlistPath);
-            var exporter = new PlaylistExporter { PostProcess = output.PostProcessPlaylist };
+            var template = output.Playlist.FileNameTemplate;
+            var playlistFileName = string.IsNullOrWhiteSpace(template)
+                ? $"{preset.Name} ({DateTime.Today:yyyy-MM-dd}).bplist"
+                : template.Replace(Templates.DATE, DateTime.Today.ToString("yyyy-MM-dd")) + ".bplist";
+            playlistFileName = playlistFileName.SanitizeFileName();
+            var playlistPath = Path.Combine(output.Playlist.PlaylistDirectory, playlistFileName);
+            var exporter = new PlaylistExporter { PostProcess = output.Playlist.PostProcessPlaylist };
             await exporter.ExportAsync(consolidated, preset.Name, preset.Author, preset.Description, playlistPath,
                 cToken);
         }
+
+        // TODO
+        // if (output.SongDownload.DownloadSongs)
+        // {
+        //     Log.Information("Downloading songs to {Path}", output.SongDownload.DownloadPath);
+        //     Parallel.
+        // }
 
         return consolidated.Length;
     }
