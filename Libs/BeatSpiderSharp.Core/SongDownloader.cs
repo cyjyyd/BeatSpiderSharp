@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using BeatSpiderSharp.Core.Utilities;
 using BeatSpiderSharp.Models;
 using BeatSpiderSharp.Models.Preset;
 using Microsoft.IO;
@@ -147,31 +148,67 @@ public class SongDownloader(SongDownloadConfig config) : IDisposable
 
         using var response = await _httpClient.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cToken);
         response.EnsureSuccessStatusCode();
-        Stream stream;
-        if (config.SaveZips && _zipDirValid)
-        {
-            var zipPath = Path.Combine(_zipDir, zipName);
-            stream = new FileStream(zipPath, FileMode.Create, FileAccess.ReadWrite);
-            await response.Content.CopyToAsync(stream, cToken);
-            await stream.FlushAsync(cToken);
-            Log.Debug("Saved song zip to {ZipPath}", zipPath);
-        }
-        else
-        {
-            // buffer it into pooled memory stream
-            var capacity = response.Content.Headers.ContentLength ?? 0;
-            stream = StreamManager.GetStream(hash, capacity, true);
-            await response.Content.CopyToAsync(stream, cToken);
-        }
+
+        var stream = config.SaveZips && _zipDirValid
+            ? await SaveZipToDisk(response.Content, Path.Combine(_zipDir, zipName), cToken)
+            : await BufferZipToMemory(response.Content, hash, cToken);
 
         stream.Seek(0, SeekOrigin.Begin);
         return stream;
+    }
+
+    /// <summary>
+    ///     Save the response to a temporary file and promotes it on success
+    /// </summary>
+    /// <returns>A read-only stream of the saved file</returns>
+    private static async Task<Stream> SaveZipToDisk(HttpContent content, string zipPath, CancellationToken cToken)
+    {
+        var tempPath = zipPath + ".part";
+        try
+        {
+            await using (var writeStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write))
+            {
+                await content.CopyToAsync(writeStream, cToken);
+            }
+
+            File.Move(tempPath, zipPath, true);
+        }
+        catch
+        {
+            FileUtils.TryDeleteFile(tempPath);
+            throw;
+        }
+
+        Log.Debug("Saved song zip to {ZipPath}", zipPath);
+        return File.OpenRead(zipPath);
+    }
+
+    /// <summary>
+    ///     Buffers the response into a pooled memory stream.
+    /// </summary>
+    private static async Task<Stream> BufferZipToMemory(HttpContent content, string hash, CancellationToken cToken)
+    {
+        var capacity = content.Headers.ContentLength ?? 0;
+        var memoryStream = StreamManager.GetStream(hash, capacity, true);
+        try
+        {
+            await content.CopyToAsync(memoryStream, cToken);
+        }
+        catch
+        {
+            // Return the buffer back to the pool
+            await memoryStream.DisposeAsync();
+            throw;
+        }
+
+        return memoryStream;
     }
 
     private async Task<bool> UnZipSong(Stream stream, string path)
     {
         Log.Verbose("Unzipping song to {Song}", path);
         // todo
+        await Task.Delay(350);
         return true;
     }
 }
