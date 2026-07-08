@@ -1,5 +1,5 @@
 ﻿using BeatSpiderSharp.Core.Filters;
-using BeatSpiderSharp.Extensions;
+using BeatSpiderSharp.Core.Utilities;
 using BeatSpiderSharp.Models;
 using BeatSpiderSharp.Models.Enums;
 using BeatSpiderSharp.Models.Preset;
@@ -101,7 +101,7 @@ public abstract class BeatSpider : IDisposable
             var playlistFileName = string.IsNullOrWhiteSpace(template)
                 ? $"{preset.Name} ({DateTime.Today:yyyy-MM-dd}).bplist"
                 : template.Replace(Templates.DATE, DateTime.Today.ToString("yyyy-MM-dd")) + ".bplist";
-            playlistFileName = playlistFileName.SanitizeFileName();
+            playlistFileName = FileUtils.SanitizeFileName(playlistFileName, '_');
             var playlistPath = Path.Combine(output.Playlist.PlaylistDirectory, playlistFileName);
             var exporter = new PlaylistExporter { PostProcess = output.Playlist.PostProcessPlaylist };
             await exporter.ExportAsync(consolidated, preset.Name, preset.Author, preset.Description, playlistPath,

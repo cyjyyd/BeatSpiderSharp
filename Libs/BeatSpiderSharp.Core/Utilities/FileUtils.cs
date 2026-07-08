@@ -1,9 +1,24 @@
-﻿using Serilog;
+﻿using System.Buffers;
+using Serilog;
 
 namespace BeatSpiderSharp.Core.Utilities;
 
 public static class FileUtils
 {
+    // Path.GetInvalidFileNameChars() is platform-dependent, need to hard coded windows specific invalid chars
+    private static readonly SearchValues<char> InvalidFileNameChars = SearchValues.Create(
+        [..Path.GetInvalidFileNameChars(), '<', '>', ':', '"', '/', '\\', '|', '?', '*']);
+
+    public static string SanitizeFileName(string fileName, char replacement)
+    {
+        return string.Concat(fileName.Select(c => InvalidFileNameChars.Contains(c) ? replacement : c));
+    }
+
+    public static string SanitizeFileName(string fileName)
+    {
+        return string.Concat(fileName.Where(c => !InvalidFileNameChars.Contains(c)));
+    }
+    
     public static void TryDeleteFile(string path)
     {
         try

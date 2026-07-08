@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.IO.Compression;
+using System.Text.RegularExpressions;
 using BeatSpiderSharp.Core.Utilities;
 using BeatSpiderSharp.Models;
 using BeatSpiderSharp.Models.Preset;
@@ -8,7 +9,7 @@ using Serilog;
 
 namespace BeatSpiderSharp.Core;
 
-public class SongDownloader(SongDownloadConfig config) : IDisposable
+public partial class SongDownloader(SongDownloadConfig config) : IDisposable
 {
     private const int CONCURRENCY = 8;
 
@@ -141,8 +142,12 @@ public class SongDownloader(SongDownloadConfig config) : IDisposable
         }
     }
 
-    private string GetSongFolderName(BeatSpiderSong song) =>
-        config.FolderNameTemplate
+    [GeneratedRegex(@"[^\x00-\x7F]|\+")]
+    private partial Regex EnglishRe();
+
+    private string GetSongFolderName(BeatSpiderSong song)
+    {
+        var name = config.FolderNameTemplate
             .Replace(Templates.BSR, song.Bsr)
             .Replace(Templates.HASH, song.Hash)
             .Replace(Templates.TITLE, song.BeatSaverSong.Name ?? "")
@@ -150,7 +155,14 @@ public class SongDownloader(SongDownloadConfig config) : IDisposable
             .Replace(Templates.SONG_SUB_NAME, song.BeatSaverSong.Metadata?.SongSubName ?? "")
             .Replace(Templates.SONG_AUTHOR, song.BeatSaverSong.Metadata?.LevelAuthorName ?? "")
             .Replace(Templates.MAPPER, song.BeatSaverSong.Metadata?.LevelAuthorName ?? "");
-    
+        name = FileUtils.SanitizeFileName(name);
+        if (config.EnglishOnly)
+        {
+            name = EnglishRe().Replace(name, "_");
+        }
+
+        return name;
+    }
 
     private async Task<Stream?> GetSongStream(string? url, string hash, CancellationToken cToken)
     {
