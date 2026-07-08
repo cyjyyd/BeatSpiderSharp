@@ -48,4 +48,32 @@ public static class FileUtils
             Log.Warning(e, "Failed to delete directory {Path}", path);
         }
     }
+
+    public static IEnumerable<string> EnumerateDirectories(IEnumerable<string> paths, string searchPattern = "*",
+        SearchOption searchOption = SearchOption.TopDirectoryOnly)
+    {
+        return paths.Where(path =>
+            {
+                var exists = Directory.Exists(path);
+                if (!exists)
+                {
+                    Log.Warning("Directory {Path} does not exist", path);
+                }
+
+                return exists;
+            })
+            .SelectMany(path =>
+            {
+                try
+                {
+                    return Directory.EnumerateDirectories(path, searchPattern, searchOption);
+                }
+                catch (Exception e)
+                {
+                    Log.Warning(e, "Failed to enumerate directories in {Path}", path);
+                    return [];
+                }
+            })
+            .Select(Path.GetFullPath);
+    }
 }

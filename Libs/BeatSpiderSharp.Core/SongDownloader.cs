@@ -1,10 +1,12 @@
 ﻿using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using System.IO.Compression;
 using System.Text.RegularExpressions;
 using BeatSpiderSharp.Core.Utilities;
 using BeatSpiderSharp.Models;
 using BeatSpiderSharp.Models.Preset;
 using Microsoft.IO;
+using Microsoft.VisualBasic.FileIO;
 using Serilog;
 
 namespace BeatSpiderSharp.Core;
@@ -60,9 +62,8 @@ public partial class SongDownloader(SongDownloadConfig config) : IDisposable
             Log.Warning("Folder name template is empty");
             return songs;
         }
-        
-        Log.Information("Downloading songs to {Path}", _outDir);
 
+        Log.Information("Downloading songs to {Path}", _outDir);
 
         if (config.UseLocalZips || config.SaveZips)
         {
@@ -85,6 +86,20 @@ public partial class SongDownloader(SongDownloadConfig config) : IDisposable
             }
         }
 
+        var copiableSongs = config is { CopyLocalSongs: true, LocalSongPaths.Count: > 0 }
+            ? FileUtils
+                .EnumerateDirectories(config.LocalSongPaths)
+                .GroupBy(dir => Path.GetFileName(dir))
+                .ToImmutableDictionary(grp => grp.Key, grp => grp.First())
+            : null;
+
+        var skippingSongs = config is { SkipExisting: true, ExistingSongPaths.Count: > 0 }
+            ? FileUtils
+                .EnumerateDirectories(config.ExistingSongPaths)
+                .Select(path => Path.GetFileName(path))
+                .ToImmutableHashSet()
+            : null;
+
         var failed = new ConcurrentBag<BeatSpiderSong>();
 
         var pOptions = new ParallelOptions { MaxDegreeOfParallelism = CONCURRENCY, CancellationToken = token };
@@ -93,7 +108,7 @@ public partial class SongDownloader(SongDownloadConfig config) : IDisposable
         {
             try
             {
-                if (!await DownloadSong(song, cToken))
+                if (!await DownloadSong(song, copiableSongs, skippingSongs, cToken))
                 {
                     failed.Add(song);
                 }
@@ -108,7 +123,8 @@ public partial class SongDownloader(SongDownloadConfig config) : IDisposable
         return failed;
     }
 
-    private async Task<bool> DownloadSong(BeatSpiderSong song, CancellationToken cToken)
+    private async Task<bool> DownloadSong(BeatSpiderSong song, ImmutableDictionary<string, string>? copiableSongs,
+        ImmutableHashSet<string>? skippingSongs, CancellationToken cToken)
     {
         Log.Debug("Downloading song {Song} ({Hash})", song, song.Hash);
 
@@ -119,8 +135,42 @@ public partial class SongDownloader(SongDownloadConfig config) : IDisposable
             return false;
         }
 
-        //TODO check existing song and skip if already downloaded
-        //TODO check existing song and copy if already downloaded
+        if (skippingSongs?.Contains(folderName) == true)
+        {
+            Log.Information("Skipping existing song {Name}", folderName);
+            return true;
+        }
+
+        var folderPath = Path.Combine(_outDir, folderName);
+        if (copiableSongs?.TryGetValue(folderName, out var sourcePath) == true)
+        {
+            if (folderPath == sourcePath)
+            {
+                Log.Warning("Local song is already in the download path, skip copying {FolderPath}", folderPath);
+                return true;
+            }
+
+            Log.Debug("Copying local song from {Source}", sourcePath);
+            try
+            {
+                if (Directory.Exists(folderPath))
+                {
+                    Log.Warning("Song folder already exists, merging: {FolderPath}", folderPath);
+                    FileSystem.CopyDirectory(sourcePath, folderPath, true);
+                }
+                else
+                {
+                    FileSystem.CopyDirectory(sourcePath, folderPath);
+                }
+
+                Log.Information("Copied local song: {Song} ({Hash})", song, song.Hash);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Log.Warning(e, "Failed to copy local song from {Source}, will download instead", sourcePath);
+            }
+        }
 
         await using var stream = await GetSongStream(song.BeatSaverSong.LatestVersion.DownloadURL, song.Hash, cToken);
         if (stream is null)
@@ -130,7 +180,6 @@ public partial class SongDownloader(SongDownloadConfig config) : IDisposable
 
         try
         {
-            var folderPath = Path.Combine(_outDir, folderName);
             await UnZipSong(stream, folderPath, cToken);
             Log.Information("Downloaded song: {Song} ({Hash})", song, song.Hash);
             return true;
@@ -262,17 +311,13 @@ public partial class SongDownloader(SongDownloadConfig config) : IDisposable
 
             if (!Directory.Exists(folderPath))
             {
+                //This is faster than FileSystem.MoveDirectory
                 Directory.Move(tempPath, folderPath);
             }
             else
             {
                 Log.Warning("Song folder already exists, merging: {FolderPath}", folderPath);
-                foreach (var file in Directory.EnumerateFiles(tempPath, "*", SearchOption.AllDirectories))
-                {
-                    var target = Path.Combine(folderPath, Path.GetRelativePath(tempPath, file));
-                    Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-                    File.Move(file, target, true);
-                }
+                FileSystem.MoveDirectory(tempPath, folderPath, true);
             }
         }
         finally
