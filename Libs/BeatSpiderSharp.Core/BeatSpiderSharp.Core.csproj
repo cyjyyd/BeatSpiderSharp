@@ -3,6 +3,7 @@
   <ItemGroup>
     <PackageReference Include="BeatSaberPlaylistsLib" />
     <PackageReference Include="BeatSaverSharper" />
+    <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Serilog" />
     <PackageReference Include="Serilog.Sinks.Console" />
