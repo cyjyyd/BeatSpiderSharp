@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.IO.Compression;
 using BeatSpiderSharp.Core.Utilities;
 using BeatSpiderSharp.Models;
 using BeatSpiderSharp.Models.Preset;
@@ -53,6 +54,12 @@ public class SongDownloader(SongDownloadConfig config) : IDisposable
             return songs;
         }
 
+        if (string.IsNullOrWhiteSpace(config.FolderNameTemplate))
+        {
+            Log.Warning("Folder name template is empty");
+            return songs;
+        }
+        
         Log.Information("Downloading songs to {Path}", _outDir);
 
 
@@ -104,6 +111,13 @@ public class SongDownloader(SongDownloadConfig config) : IDisposable
     {
         Log.Debug("Downloading song {Song} ({Hash})", song, song.Hash);
 
+        var folderName = GetSongFolderName(song);
+        if (string.IsNullOrWhiteSpace(folderName))
+        {
+            Log.Error("Folder name is empty after template replacement for song {Song} ({Hash})", song, song.Hash);
+            return false;
+        }
+
         //TODO check existing song and skip if already downloaded
         //TODO check existing song and copy if already downloaded
 
@@ -115,8 +129,8 @@ public class SongDownloader(SongDownloadConfig config) : IDisposable
 
         try
         {
-            // TODO Unzip 
-            // await UnZipSong(stream, ...);
+            var folderPath = Path.Combine(_outDir, folderName);
+            await UnZipSong(stream, folderPath, cToken);
             Log.Information("Downloaded song: {Song} ({Hash})", song, song.Hash);
             return true;
         }
@@ -126,6 +140,17 @@ public class SongDownloader(SongDownloadConfig config) : IDisposable
             return false;
         }
     }
+
+    private string GetSongFolderName(BeatSpiderSong song) =>
+        config.FolderNameTemplate
+            .Replace(Templates.BSR, song.Bsr)
+            .Replace(Templates.HASH, song.Hash)
+            .Replace(Templates.TITLE, song.BeatSaverSong.Name ?? "")
+            .Replace(Templates.SONG_NAME, song.BeatSaverSong.Metadata?.SongName ?? "")
+            .Replace(Templates.SONG_SUB_NAME, song.BeatSaverSong.Metadata?.SongSubName ?? "")
+            .Replace(Templates.SONG_AUTHOR, song.BeatSaverSong.Metadata?.LevelAuthorName ?? "")
+            .Replace(Templates.MAPPER, song.BeatSaverSong.Metadata?.LevelAuthorName ?? "");
+    
 
     private async Task<Stream?> GetSongStream(string? url, string hash, CancellationToken cToken)
     {
@@ -204,11 +229,43 @@ public class SongDownloader(SongDownloadConfig config) : IDisposable
         return memoryStream;
     }
 
-    private async Task<bool> UnZipSong(Stream stream, string path)
+    /// <summary>
+    ///     Extracts the zip <paramref name="stream" /> into <paramref name="folderPath" />. The zip is
+    ///     extracted to a temporary folder first, then moved to the correct folder.
+    ///     If the target folder already exists, the files are merged into it.
+    /// </summary>
+    private static async Task UnZipSong(Stream stream, string folderPath, CancellationToken cToken)
     {
-        Log.Verbose("Unzipping song to {Song}", path);
-        // todo
-        await Task.Delay(350);
-        return true;
+        Log.Verbose("Unzipping song to {FolderPath}", folderPath);
+
+        var tempPath = folderPath + ".tmp";
+        FileUtils.TryDeleteDirectory(tempPath);
+
+        try
+        {
+            await using (var archive = new ZipArchive(stream, ZipArchiveMode.Read, true))
+            {
+                await archive.ExtractToDirectoryAsync(tempPath, cToken);
+            }
+
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.Move(tempPath, folderPath);
+            }
+            else
+            {
+                Log.Warning("Song folder already exists, merging: {FolderPath}", folderPath);
+                foreach (var file in Directory.EnumerateFiles(tempPath, "*", SearchOption.AllDirectories))
+                {
+                    var target = Path.Combine(folderPath, Path.GetRelativePath(tempPath, file));
+                    Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                    File.Move(file, target, true);
+                }
+            }
+        }
+        finally
+        {
+            FileUtils.TryDeleteDirectory(tempPath);
+        }
     }
 }
