@@ -4,17 +4,22 @@ namespace BeatSpiderSharp.CLI.CLIRunners;
 
 internal class BeatSpiderRunner : RunnerBase
 {
-    private readonly Option<string> _inputPreset = new("--input-preset", "-i")
+    private readonly Option<string> _inputPreset = new Option<string>("--input-preset", "-i")
     {
         Required = true,
         Description = "Input preset file path"
-    };
+    }.AcceptLegalFilePathsOnly();
 
-    private readonly Option<string> _songCachePath = new("--song-cache-data", "-s")
+    private readonly Option<string> _songCachePath = new Option<string>("--song-cache-data", "-s")
     {
         Required = true,
         Description = "Song cache data file path"
-    };
+    }.AcceptLegalFilePathsOnly();
+
+    private readonly Option<string> _localZipsPath = new Option<string>("--local-zips-path", "-S")
+    {
+        Description = "Local song zips path"
+    }.AcceptLegalFilePathsOnly();
 
     private readonly Option<bool> _gZipCacheData = new("--gzip-cache-data", "-z")
     {
@@ -22,15 +27,15 @@ internal class BeatSpiderRunner : RunnerBase
         DefaultValueFactory = _ => false
     };
 
-    private readonly Option<string> _outputPlaylist = new("--output-playlist", "-o")
+    private readonly Option<string> _outputPlaylist = new Option<string>("--output-playlist", "-o")
     {
         Description = "Output playlist file path"
-    };
+    }.AcceptLegalFilePathsOnly();
 
-    private readonly Option<string> _outputSongPath = new("--output-song-path", "-O")
+    private readonly Option<string> _outputSongPath = new Option<string>("--output-song-path", "-O")
     {
         Description = "Output song path"
-    };
+    }.AcceptLegalFilePathsOnly();
 
     private readonly Option<string> _presetAuthor = new("--preset-author")
     {
@@ -49,16 +54,34 @@ internal class BeatSpiderRunner : RunnerBase
         DefaultValueFactory = _ => false
     };
 
+    private readonly Option<bool> _skipExistingSongs = new("--skip-existing-songs", "-k")
+    {
+        Description = "Skip existing songs in the output song folder",
+        DefaultValueFactory = _ => false
+    };
+
+    private readonly Option<bool?> _saveSongZips = new("--save-song-zips", "-l")
+    {
+        Description = "Save song zips",
+        DefaultValueFactory = _ => null
+    };
+
+    private readonly Option<bool?> _useLocalZips = new("--use-local-zips", "-L")
+    {
+        Description = "Use local song zips",
+        DefaultValueFactory = _ => null
+    };
+
     private readonly Option<bool> _inputIsLegacy = new("--legacy")
     {
         Description = "Input preset is in legacy format",
         DefaultValueFactory = _ => false
     };
 
-    private readonly Option<string> _saveConvertedPresetPath = new("--save-preset")
+    private readonly Option<string> _saveConvertedPresetPath = new Option<string>("--save-preset")
     {
         Description = "Save converted preset to file, only works with legacy input preset"
-    };
+    }.AcceptLegalFilePathsOnly();
 
     private readonly Option<bool> _convertPresetAndExit = new("--convert-only")
     {
@@ -76,12 +99,16 @@ internal class BeatSpiderRunner : RunnerBase
     [
         _inputPreset,
         _songCachePath,
+        _localZipsPath,
         _gZipCacheData,
         _outputPlaylist,
         _outputSongPath,
         _presetAuthor,
         _disablePlaylistOutput,
         _disableSongDownload,
+        _skipExistingSongs,
+        _saveSongZips,
+        _useLocalZips,
         _inputIsLegacy,
         _saveConvertedPresetPath,
         _convertPresetAndExit,
@@ -96,12 +123,16 @@ internal class BeatSpiderRunner : RunnerBase
         {
             InputPreset = parseResult.GetRequiredValue(_inputPreset),
             SongCachePath = parseResult.GetRequiredValue(_songCachePath),
+            LocalZipsPath = parseResult.GetValue(_localZipsPath),
             GZipCacheData = parseResult.GetRequiredValue(_gZipCacheData),
-            OutputPlaylist = parseResult.GetValue(_outputPlaylist),
+            PlaylistDirectory = parseResult.GetValue(_outputPlaylist),
             OutputSongPath = parseResult.GetValue(_outputSongPath),
             PresetAuthor = parseResult.GetValue(_presetAuthor),
             DisablePlaylistOutput = parseResult.GetRequiredValue(_disablePlaylistOutput),
             DisableSongDownload = parseResult.GetRequiredValue(_disableSongDownload),
+            SkipExistingSongs = parseResult.GetRequiredValue(_skipExistingSongs),
+            SaveSongZips = parseResult.GetValue(_saveSongZips),
+            UseLocalZips = parseResult.GetValue(_useLocalZips),
             InputIsLegacy = parseResult.GetRequiredValue(_inputIsLegacy),
             SaveConvertedPresetPath = parseResult.GetValue(_saveConvertedPresetPath),
             ConvertPresetAndExit = parseResult.GetRequiredValue(_convertPresetAndExit),

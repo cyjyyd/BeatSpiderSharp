@@ -6,9 +6,11 @@ public record BeatSpiderOptions
 
     public required string SongCachePath { get; init; }
 
+    public string? LocalZipsPath { get; init; }
+
     public bool GZipCacheData { get; init; }
 
-    public string? OutputPlaylist { get; init; }
+    public string? PlaylistDirectory { get; init; }
 
     public string? OutputSongPath { get; init; }
 
@@ -17,6 +19,12 @@ public record BeatSpiderOptions
     public bool DisablePlaylistOutput { get; init; }
 
     public bool DisableSongDownload { get; init; }
+
+    public bool SkipExistingSongs { get; init; }
+
+    public bool? SaveSongZips { get; init; }
+
+    public bool? UseLocalZips { get; init; }
 
     public bool InputIsLegacy { get; init; }
 

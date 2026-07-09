@@ -1,5 +1,5 @@
 ﻿using BeatSpiderSharp.Core.Filters;
-using BeatSpiderSharp.Extensions;
+using BeatSpiderSharp.Core.Utilities;
 using BeatSpiderSharp.Models;
 using BeatSpiderSharp.Models.Enums;
 using BeatSpiderSharp.Models.Preset;
@@ -101,19 +101,23 @@ public abstract class BeatSpider : IDisposable
             var playlistFileName = string.IsNullOrWhiteSpace(template)
                 ? $"{preset.Name} ({DateTime.Today:yyyy-MM-dd}).bplist"
                 : template.Replace(Templates.DATE, DateTime.Today.ToString("yyyy-MM-dd")) + ".bplist";
-            playlistFileName = playlistFileName.SanitizeFileName();
+            playlistFileName = FileUtils.SanitizeFileName(playlistFileName, '_');
             var playlistPath = Path.Combine(output.Playlist.PlaylistDirectory, playlistFileName);
             var exporter = new PlaylistExporter { PostProcess = output.Playlist.PostProcessPlaylist };
             await exporter.ExportAsync(consolidated, preset.Name, preset.Author, preset.Description, playlistPath,
                 cToken);
         }
 
-        // TODO
-        // if (output.SongDownload.DownloadSongs)
-        // {
-        //     Log.Information("Downloading songs to {Path}", output.SongDownload.DownloadPath);
-        //     Parallel.
-        // }
+        if (output.SongDownload.DownloadSongs)
+        {
+            using var songDownloader = new SongDownloader(output.SongDownload);
+            var failed = await songDownloader.DownloadSongs(consolidated, cToken);
+            if (failed.Count > 0)
+            {
+                Log.Warning("Failed to download {Count} songs", failed.Count);
+                Log.Warning("Failed to download songs: {Failed}", failed);
+            }
+        }
 
         return consolidated.Length;
     }

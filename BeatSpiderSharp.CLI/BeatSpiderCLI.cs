@@ -183,9 +183,9 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
         }
         else if (output.Playlist.SavePlaylist)
         {
-            if (!string.IsNullOrWhiteSpace(options.OutputPlaylist))
+            if (!string.IsNullOrWhiteSpace(options.PlaylistDirectory))
             {
-                output.Playlist.PlaylistDirectory = options.OutputPlaylist;
+                output.Playlist.PlaylistDirectory = options.PlaylistDirectory;
             }
 
             output.Playlist.SavePlaylist = !string.IsNullOrWhiteSpace(output.Playlist.PlaylistDirectory);
@@ -203,6 +203,33 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
             }
 
             output.SongDownload.DownloadSongs = !string.IsNullOrWhiteSpace(output.SongDownload.DownloadPath);
+
+            if (options.SkipExistingSongs)
+            {
+                if (!output.SongDownload.SkipExisting)
+                {
+                    // we don't want leftover paths to be in effect when skipping was not enabled
+                    output.SongDownload.ExistingSongPaths.Clear();
+                }
+
+                output.SongDownload.SkipExisting = true;
+                output.SongDownload.ExistingSongPaths.Add(output.SongDownload.DownloadPath);
+            }
+
+            if (!string.IsNullOrEmpty(options.LocalZipsPath))
+            {
+                output.SongDownload.LocalZipsPath = options.LocalZipsPath;
+            }
+
+            if (options.SaveSongZips.HasValue)
+            {
+                output.SongDownload.SaveZips = options.SaveSongZips.Value;
+            }
+
+            if (options.UseLocalZips.HasValue)
+            {
+                output.SongDownload.UseLocalZips = options.UseLocalZips.Value;
+            }
         }
     }
 

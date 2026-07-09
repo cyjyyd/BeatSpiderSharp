@@ -26,7 +26,7 @@ public class PlaylistConfig
     public string FileNameTemplate { get; set; } = string.Empty;
 }
 
-public class SongDownloadConfig
+public record SongDownloadConfig
 {
     public bool DownloadSongs { get; set; }
 
@@ -35,6 +35,12 @@ public class SongDownloadConfig
     public string FolderNameTemplate { get; set; } = $"{Templates.BSR} ({Templates.SONG_NAME} - {Templates.MAPPER})";
 
     public bool EnglishOnly { get; set; }
+
+    public bool SaveZips { get; set; }
+
+    public bool UseLocalZips { get; set; }
+
+    public string LocalZipsPath { get; set; } = string.Empty;
 
     public bool SkipExisting { get; set; }
 
