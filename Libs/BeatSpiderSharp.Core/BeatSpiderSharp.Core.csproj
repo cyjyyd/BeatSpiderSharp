@@ -20,5 +20,6 @@
     <ProjectReference Include="..\BeatSpiderSharp.Extensions\BeatSpiderSharp.Extensions.csproj" />
     <ProjectReference Include="..\BeatSpiderSharp.Legacy\BeatSpiderSharp.Legacy.csproj" />
     <ProjectReference Include="..\BeatSpiderSharp.Models\BeatSpiderSharp.Models.csproj" />
+    <ProjectReference Include="..\BeatSpiderSharp.Shared\BeatSpiderSharp.Shared.csproj" />
   </ItemGroup>
 </Project>

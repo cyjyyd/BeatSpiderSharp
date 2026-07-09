@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;
+using BeatSpiderSharp.Shared;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -11,11 +12,11 @@ public class BeatSaverCrawler(IProgress<ProgressReport>? progress) : IDisposable
     private const string ApiUrl = "https://api.beatsaver.com/search/text/";
     private const int PageSize = 100;
 
-    private readonly HttpClient _client = new(new SocketsHttpHandler
+    private readonly HttpClient _client = HttpClientCreator.Create(new SocketsHttpHandler
     {
         PooledConnectionLifetime = TimeSpan.FromMinutes(5),
         MaxConnectionsPerServer = 5
-    });
+    }, "BeatSpiderSharp.Cacher");
 
     public bool UseGZip { get; init; }
 

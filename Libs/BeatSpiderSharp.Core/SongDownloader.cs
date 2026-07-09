@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using BeatSpiderSharp.Core.Utilities;
 using BeatSpiderSharp.Models;
 using BeatSpiderSharp.Models.Preset;
+using BeatSpiderSharp.Shared;
 using Microsoft.IO;
 using Microsoft.VisualBasic.FileIO;
 using Serilog;
@@ -29,7 +30,7 @@ public partial class SongDownloader(SongDownloadConfig config) : IDisposable
     private string _zipDir = string.Empty;
     private bool _zipDirValid;
 
-    private readonly HttpClient _httpClient = new(new SocketsHttpHandler
+    private readonly HttpClient _httpClient = HttpClientCreator.Create(new SocketsHttpHandler
     {
         PooledConnectionLifetime = TimeSpan.FromMinutes(5),
         MaxConnectionsPerServer = CONCURRENCY

@@ -186,5 +186,5 @@ ij_xml_space_inside_empty_tag = false
 ij_xml_text_wrap = normal
 ij_xml_use_custom_settings = false
 
-[{*.androidproj,*.ccproj,*.csproj}]
+[{*.androidproj,*.ccproj,*.csproj,*.props,*.targets}]
 indent_size = 2
