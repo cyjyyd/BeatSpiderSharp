@@ -9,6 +9,16 @@ public static class FileUtils
     private static readonly SearchValues<char> InvalidFileNameChars = SearchValues.Create(
         [..Path.GetInvalidFileNameChars(), '<', '>', ':', '"', '/', '\\', '|', '?', '*']);
 
+    /// <summary>
+    ///     Compares paths using current OS's default filesystem case-sensitivity:
+    ///     case-insensitive on Windows and macOS, case-sensitive elsewhere.
+    /// </summary>
+    /// <remarks>This does not cover non-default cases</remarks>
+    public static readonly StringComparer PathComparer =
+        OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
+
     public static string SanitizeFileName(string fileName, char replacement)
     {
         return string.Concat(fileName.Select(c => InvalidFileNameChars.Contains(c) ? replacement : c));

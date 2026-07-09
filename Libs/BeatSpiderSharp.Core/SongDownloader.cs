@@ -89,15 +89,15 @@ public partial class SongDownloader(SongDownloadConfig config) : IDisposable
         var copiableSongs = config is { CopyLocalSongs: true, LocalSongPaths.Count: > 0 }
             ? FileUtils
                 .EnumerateDirectories(config.LocalSongPaths)
-                .GroupBy(dir => Path.GetFileName(dir))
-                .ToImmutableDictionary(grp => grp.Key, grp => grp.First())
+                .GroupBy(dir => Path.GetFileName(dir), FileUtils.PathComparer)
+                .ToImmutableDictionary(grp => grp.Key, grp => grp.First(), FileUtils.PathComparer)
             : null;
 
         var skippingSongs = config is { SkipExisting: true, ExistingSongPaths.Count: > 0 }
             ? FileUtils
                 .EnumerateDirectories(config.ExistingSongPaths)
                 .Select(path => Path.GetFileName(path))
-                .ToImmutableHashSet()
+                .ToImmutableHashSet(FileUtils.PathComparer)
             : null;
 
         var failed = new ConcurrentBag<BeatSpiderSong>();
@@ -144,7 +144,7 @@ public partial class SongDownloader(SongDownloadConfig config) : IDisposable
         var folderPath = Path.Combine(_outDir, folderName);
         if (copiableSongs?.TryGetValue(folderName, out var sourcePath) == true)
         {
-            if (folderPath == sourcePath)
+            if (FileUtils.PathComparer.Equals(folderPath, sourcePath))
             {
                 Log.Warning("Local song is already in the download path, skip copying {FolderPath}", folderPath);
                 return true;
