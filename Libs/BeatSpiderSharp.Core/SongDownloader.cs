@@ -184,7 +184,7 @@ public partial class SongDownloader(SongDownloadConfig config) : IDisposable
             return false;
         }
 
-        await UnZipSong(stream, folderPath, cToken);
+        await UnZipSong(stream, folderPath, song.Hash, cToken);
         Log.Information("Downloaded song: {Song} ({Hash})", song, song.Hash);
         return true;
     }
@@ -293,11 +293,11 @@ public partial class SongDownloader(SongDownloadConfig config) : IDisposable
     ///     extracted to a temporary folder first, then moved to the correct folder.
     ///     If the target folder already exists, the files are merged into it.
     /// </summary>
-    private static async Task UnZipSong(Stream stream, string folderPath, CancellationToken cToken)
+    private static async Task UnZipSong(Stream stream, string folderPath, string hash, CancellationToken cToken)
     {
         Log.Verbose("Unzipping song to {FolderPath}", folderPath);
 
-        var tempPath = folderPath + ".tmp";
+        var tempPath = folderPath + hash + ".tmp";
         FileUtils.TryDeleteDirectory(tempPath);
 
         try
