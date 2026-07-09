@@ -1,6 +1,7 @@
 ﻿using System.CommandLine;
 using System.CommandLine.Parsing;
 using BeatSpiderSharp.Cacher;
+using BeatSpiderSharp.Shared;
 
 var defaultColor = Console.ForegroundColor;
 var cTokenSource = new CancellationTokenSource();
@@ -120,6 +121,7 @@ rootCommand.TreatUnmatchedTokensAsErrors = true;
 
 rootCommand.SetAction(async (result, cToken) =>
 {
+    Console.WriteLine($"BeatSpider.Cacher v{Constants.Version.ToFullString()}");
     Console.ForegroundColor = ConsoleColor.Green;
     var progress = new Progress<ProgressReport>(report =>
     {

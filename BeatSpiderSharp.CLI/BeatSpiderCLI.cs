@@ -8,6 +8,7 @@ using BeatSpiderSharp.Models;
 using BeatSpiderSharp.Models.BeatSaver;
 using BeatSpiderSharp.Models.Enums;
 using BeatSpiderSharp.Models.Preset;
+using BeatSpiderSharp.Shared;
 using Newtonsoft.Json;
 using Serilog;
 
@@ -37,6 +38,7 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
     public async Task<int> RunAsync(BeatSpiderOptions options, CancellationToken cToken)
     {
         Log.Information("BeatSpiderCLI!");
+        Log.Information("Version: {Version}", Constants.Version.ToFullString());
 
 #if DEBUG
         Log.Debug("Options: {@Options}", options);
