@@ -4,12 +4,26 @@ using BeatSaberPlaylistsLib.Legacy;
 using BeatSaberPlaylistsLib.Types;
 using BeatSpiderSharp.Extensions;
 using BeatSpiderSharp.Models;
+using BeatSpiderSharp.Shared;
 using Serilog;
 
 namespace BeatSpiderSharp.Core.SongSource;
 
-public class SongSourceFactory
+public class SongSourceFactory : IDisposable
 {
+    private HttpClient? _httpClient;
+
+    private HttpClient HttpClient => _httpClient ??= HttpClientCreator.Create(new SocketsHttpHandler
+    {
+        PooledConnectionLifetime = TimeSpan.FromMinutes(5)
+    });
+
+    public void Dispose()
+    {
+        _httpClient?.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
     public static IAsyncEnumerable<BeatSpiderSong> CreateFromManualSongInput(IList<string> input,
         IAsyncEnumerable<BeatSpiderSong> allSongs)
     {
@@ -36,8 +50,8 @@ public class SongSourceFactory
             bsrSet.Contains(song.Bsr.ToLowerInvariant()) || hashSet.Contains(song.Hash.ToLowerInvariant()));
     }
 
-    public static IAsyncEnumerable<BeatSpiderSong> CreateFromPlaylists(IList<string> playlistPaths,
-        IAsyncEnumerable<BeatSpiderSong> allSongs)
+    public async Task<IAsyncEnumerable<BeatSpiderSong>> CreateFromPlaylists(IList<string> playlistPaths,
+        IAsyncEnumerable<BeatSpiderSong> allSongs, CancellationToken cToken)
     {
         if (playlistPaths.Count == 0)
         {
@@ -51,26 +65,39 @@ public class SongSourceFactory
         foreach (var path in playlistPaths)
         {
             Log.Debug("Loading playlist: {PlaylistPath}", path);
-            if (!File.Exists(path))
-            {
-                throw new FileNotFoundException("Playlist file not found", path);
-            }
-
-            var extension = Path.GetExtension(path);
-
-            if (string.IsNullOrWhiteSpace(extension))
-            {
-                Log.Error("Playlist file has no extension: {PlaylistPath}", path);
-            }
 
             try
             {
-                var playlist = extension switch
+                IPlaylist? playlist;
+                if (Uri.TryCreate(path, UriKind.Absolute, out var uri) &&
+                    (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
                 {
-                    ".json" or ".bplist" => bplistHandler.Deserialize(path),
-                    ".blist" => blistHandler.Deserialize(path),
-                    _ => null
-                };
+                    Log.Debug("Downloading playlist: {Uri}", uri);
+                    var data = await HttpClient.GetByteArrayAsync(uri, cToken);
+                    await using var stream = new MemoryStream(data);
+                    playlist = bplistHandler.Deserialize(stream);
+                }
+                else
+                {
+                    if (!File.Exists(path))
+                    {
+                        throw new FileNotFoundException("Playlist file not found", path);
+                    }
+
+                    var extension = Path.GetExtension(path);
+
+                    if (string.IsNullOrWhiteSpace(extension))
+                    {
+                        Log.Error("Playlist file has no extension: {PlaylistPath}", path);
+                    }
+
+                    playlist = extension switch
+                    {
+                        ".json" or ".bplist" => bplistHandler.Deserialize(path),
+                        ".blist" => blistHandler.Deserialize(path),
+                        _ => null
+                    };
+                }
 
                 if (playlist == null)
                 {
@@ -81,9 +108,14 @@ public class SongSourceFactory
                     playlists.Add(playlist);
                 }
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 Log.Error(e, "Failed to load playlist: {Name}", path);
+                throw;
             }
         }
 

@@ -24,8 +24,8 @@ Two executables:
 - **`BeatSpiderSharp.CLI`** — reads that cache file, applies a preset's filters, and exports a playlist and/or
   downloads the matching songs. Its user-facing strings are in English.
 
-The Cacher output is the CLI's input. The CLI never calls the BeatSaver search API itself; it only downloads map
-zips from the URLs already present in the cached data.
+The Cacher output is the CLI's input. The CLI never calls the BeatSaver search API itself. Its only network traffic is
+map zips, fetched from the URLs already present in the cached data, and playlists given to it as `http(s)` URLs.
 
 ## Layout
 
@@ -74,7 +74,10 @@ dotnet run --project BeatSpiderSharp.CLI -- -i preset.json -s cache.json.gz -z -
 4. Stream songs from the cache. `JsonExtensions.DeserializeArrayAsync` walks to the `docs` property and yields
    `Song` records one at a time as `IAsyncEnumerable`. The cache is far too large to `JObject.Parse`; keep it streaming.
 5. Narrow by input source (`SongInputSource.BeatSaver` = everything, or intersect with playlists / a manual bsr+hash
-   list via `SongSourceFactory`).
+   list via `SongSourceFactory`, which is `IDisposable` because it lazily opens an `HttpClient`). An entry in
+   `InputConfig.Playlists` is either a local path — `.json`/`.bplist` or `.blist`, by extension — or an `http(s)` URL,
+   which is downloaded and always parsed as bplist. A playlist that fails to load aborts the run rather than being
+   skipped; `RunAsync` catches it and returns exit code 1.
 6. Filter (see below).
 7. `OutputSongsAsync` — optional rating sort, optional count limit, then materialize to an array and hand it to
    `PlaylistExporter` and/or `SongDownloader`.
@@ -141,8 +144,8 @@ These rules are easy to get backwards; check them before touching filter code.
   source whose implied filter contradicts the preset's own filter). Keep that posture — a wrong playlist is worse
   than a failed conversion.
 - Build every `HttpClient` with `HttpClientCreator.Create(handler, productName)`; it is the only thing that attaches
-  the `User-Agent`. `SongDownloader` sends `BeatSpiderSharp/{version}`, `BeatSaverCrawler` sends
-  `BeatSpiderSharp.Cacher/{version}` so BeatSaver can tell the crawler from the downloader.
+  the `User-Agent`. There are three: `SongDownloader` and `SongSourceFactory` send `BeatSpiderSharp/{version}`,
+  `BeatSaverCrawler` sends `BeatSpiderSharp.Cacher/{version}` so BeatSaver can tell the crawler from the downloader.
 - `Constants.Version` reads the **entry** assembly's `AssemblyInformationalVersion`, so it reports the running exe's
   version, not Shared's. The SDK appends `+{commit sha}` to that attribute inside a git repo, which is why it is
   parsed through `SemanticVersion` and emitted with `ToNormalizedString()` — that drops the sha but keeps a `-beta`

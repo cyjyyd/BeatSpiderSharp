@@ -158,13 +158,27 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
             .Where(BeatSpiderSong.ValidateBeatSaverSong)
             .Select(song => BeatSpiderSong.FromBeatSaverSong(song!));
 
-        allSongs = preset.Input.Source switch
+        using var songSourceFactory = new SongSourceFactory();
+        try
         {
-            SongInputSource.Playlists => SongSourceFactory.CreateFromPlaylists(preset.Input.Playlists, allSongs),
-            SongInputSource.ManualInput => SongSourceFactory.CreateFromManualSongInput(preset.Input.ManualInput,
-                allSongs),
-            _ => allSongs
-        };
+            allSongs = preset.Input.Source switch
+            {
+                SongInputSource.Playlists => await songSourceFactory.CreateFromPlaylists(preset.Input.Playlists,
+                    allSongs, cToken),
+                SongInputSource.ManualInput => SongSourceFactory.CreateFromManualSongInput(preset.Input.ManualInput,
+                    allSongs),
+                _ => allSongs
+            };
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            Log.Error("Failed to load song input sources");
+            return 1;
+        }
 
         Log.Information("Starting filtering for preset: {Preset}", preset.Name);
         var filteredSongs = FilterSongs(allSongs, preset);
