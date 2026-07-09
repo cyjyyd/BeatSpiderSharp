@@ -27,8 +27,8 @@ public class SongSourceFactory : IDisposable
     public static IAsyncEnumerable<BeatSpiderSong> CreateFromManualSongInput(IList<string> input,
         IAsyncEnumerable<BeatSpiderSong> allSongs)
     {
-        var bsrSet = new HashSet<string>();
-        var hashSet = new HashSet<string>();
+        var bsrSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var hashSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var entry in input)
         {
@@ -38,16 +38,15 @@ public class SongSourceFactory : IDisposable
             }
             else if (entry.Length == 40)
             {
-                hashSet.Add(entry.ToLowerInvariant());
+                hashSet.Add(entry);
             }
             else
             {
-                bsrSet.Add(entry.ToLowerInvariant());
+                bsrSet.Add(entry);
             }
         }
 
-        return allSongs.Where(song =>
-            bsrSet.Contains(song.Bsr.ToLowerInvariant()) || hashSet.Contains(song.Hash.ToLowerInvariant()));
+        return allSongs.Where(song => bsrSet.Contains(song.Bsr) || hashSet.Contains(song.Hash));
     }
 
     public async Task<IAsyncEnumerable<BeatSpiderSong>> CreateFromPlaylists(IList<string> playlistPaths,
@@ -119,17 +118,17 @@ public class SongSourceFactory : IDisposable
             }
         }
 
-        var bsrSet = new HashSet<string>();
-        var hashSet = new HashSet<string>();
+        var bsrSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var hashSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var playlistSong in playlists.SelectMany(playlist => playlist))
         {
             if (!string.IsNullOrWhiteSpace(playlistSong.Key))
             {
-                bsrSet.Add(playlistSong.Key.ToLowerInvariant());
+                bsrSet.Add(playlistSong.Key);
             }
             else if (!string.IsNullOrWhiteSpace(playlistSong.Hash))
             {
-                hashSet.Add(playlistSong.Hash.ToLowerInvariant());
+                hashSet.Add(playlistSong.Hash);
             }
             else
             {
@@ -139,7 +138,6 @@ public class SongSourceFactory : IDisposable
 
         Log.Information("Loaded {SongCount} songs from {PlaylistCount} playlists", bsrSet.Count + hashSet.Count,
             playlists.Count);
-        return allSongs.Where(song =>
-            bsrSet.Contains(song.Bsr.ToLowerInvariant()) || hashSet.Contains(song.Hash.ToLowerInvariant()));
+        return allSongs.Where(song => bsrSet.Contains(song.Bsr) || hashSet.Contains(song.Hash));
     }
 }
