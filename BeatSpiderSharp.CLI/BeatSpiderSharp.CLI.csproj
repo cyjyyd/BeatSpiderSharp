@@ -9,6 +9,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Serilog.Sinks.Console" />
     <PackageReference Include="System.CommandLine" />
   </ItemGroup>
 
