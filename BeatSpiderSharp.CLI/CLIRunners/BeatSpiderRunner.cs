@@ -54,6 +54,12 @@ internal class BeatSpiderRunner : RunnerBase
         DefaultValueFactory = _ => false
     };
 
+    private readonly Option<bool> _skipExistingSongs = new("--skip-existing-songs", "-k")
+    {
+        Description = "Skip existing songs in the output song folder",
+        DefaultValueFactory = _ => false
+    };
+
     private readonly Option<bool?> _saveSongZips = new("--save-song-zips", "-l")
     {
         Description = "Save song zips",
@@ -100,6 +106,7 @@ internal class BeatSpiderRunner : RunnerBase
         _presetAuthor,
         _disablePlaylistOutput,
         _disableSongDownload,
+        _skipExistingSongs,
         _saveSongZips,
         _useLocalZips,
         _inputIsLegacy,
@@ -123,6 +130,7 @@ internal class BeatSpiderRunner : RunnerBase
             PresetAuthor = parseResult.GetValue(_presetAuthor),
             DisablePlaylistOutput = parseResult.GetRequiredValue(_disablePlaylistOutput),
             DisableSongDownload = parseResult.GetRequiredValue(_disableSongDownload),
+            SkipExistingSongs = parseResult.GetRequiredValue(_skipExistingSongs),
             SaveSongZips = parseResult.GetValue(_saveSongZips),
             UseLocalZips = parseResult.GetValue(_useLocalZips),
             InputIsLegacy = parseResult.GetRequiredValue(_inputIsLegacy),

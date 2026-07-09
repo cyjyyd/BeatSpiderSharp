@@ -20,6 +20,8 @@ public record BeatSpiderOptions
 
     public bool DisableSongDownload { get; init; }
 
+    public bool SkipExistingSongs { get; init; }
+
     public bool? SaveSongZips { get; init; }
 
     public bool? UseLocalZips { get; init; }
