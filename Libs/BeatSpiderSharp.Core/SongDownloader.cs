@@ -113,6 +113,12 @@ public partial class SongDownloader(SongDownloadConfig config) : IDisposable
                     failed.Add(song);
                 }
             }
+            catch (OperationCanceledException)
+            {
+                Log.Warning("Download canceled for song {Song}", song);
+                failed.Add(song);
+                throw;
+            }
             catch (Exception e)
             {
                 Log.Error(e, "Failed to download song {Song}", song);
@@ -178,17 +184,9 @@ public partial class SongDownloader(SongDownloadConfig config) : IDisposable
             return false;
         }
 
-        try
-        {
-            await UnZipSong(stream, folderPath, cToken);
-            Log.Information("Downloaded song: {Song} ({Hash})", song, song.Hash);
-            return true;
-        }
-        catch (Exception e)
-        {
-            Log.Error(e, "Failed to download song {Song}", song);
-            return false;
-        }
+        await UnZipSong(stream, folderPath, cToken);
+        Log.Information("Downloaded song: {Song} ({Hash})", song, song.Hash);
+        return true;
     }
 
     [GeneratedRegex(@"[^\x00-\x7F]|\+")]
