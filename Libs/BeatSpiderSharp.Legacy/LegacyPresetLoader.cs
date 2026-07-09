@@ -239,7 +239,6 @@ public static partial class LegacyPresetLoader
         Log.Debug("Merging BeatSaver source settings into filter options");
         if (!string.IsNullOrWhiteSpace(setting.SearchKeyword) || setting.StartPage.HasValue)
         {
-            //TODO add search keyword to search filter settings once search filter is supported
             throw new LegacyConversionException("BeatSaver search keyword and starting page are not supported",
                 "BeatSaver Search");
         }
