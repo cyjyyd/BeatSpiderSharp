@@ -201,7 +201,7 @@ public partial class SongDownloader(SongDownloadConfig config) : IDisposable
             .Replace(Templates.TITLE, song.BeatSaverSong.Name ?? "")
             .Replace(Templates.SONG_NAME, song.BeatSaverSong.Metadata?.SongName ?? "")
             .Replace(Templates.SONG_SUB_NAME, song.BeatSaverSong.Metadata?.SongSubName ?? "")
-            .Replace(Templates.SONG_AUTHOR, song.BeatSaverSong.Metadata?.LevelAuthorName ?? "")
+            .Replace(Templates.SONG_AUTHOR, song.BeatSaverSong.Metadata?.SongAuthorName ?? "")
             .Replace(Templates.MAPPER, song.BeatSaverSong.Metadata?.LevelAuthorName ?? "");
         name = FileUtils.SanitizeFileName(name);
         if (config.EnglishOnly)
