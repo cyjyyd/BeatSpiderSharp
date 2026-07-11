@@ -85,27 +85,20 @@ public class SongSourceFactory : IDisposable
 
                     var extension = Path.GetExtension(path);
 
-                    if (string.IsNullOrWhiteSpace(extension))
-                    {
-                        Log.Error("Playlist file has no extension: {PlaylistPath}", path);
-                    }
-
                     playlist = extension switch
                     {
                         ".json" or ".bplist" => bplistHandler.Deserialize(path),
                         ".blist" => blistHandler.Deserialize(path),
-                        _ => null
+                        _ => throw new NotSupportedException($"Unknown playlist format: {path}")
                     };
                 }
 
                 if (playlist == null)
                 {
-                    Log.Error("Playlist format is unknown or is null: {Name}", path);
+                    throw new InvalidOperationException($"Playlist deserialized to null: {path}");
                 }
-                else
-                {
-                    playlists.Add(playlist);
-                }
+
+                playlists.Add(playlist);
             }
             catch (OperationCanceledException)
             {
