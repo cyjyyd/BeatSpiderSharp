@@ -66,11 +66,15 @@ public class SongDetailFilter : ISongFilter
             return false;
         }
 
-        if (filter.UpVotePercentage && stats?.Upvotes + stats?.Downvotes > 0 &&
-            !filter.UpVotePercentage.InRange(stats?.Upvotes * 100f / (stats?.Upvotes + stats?.Downvotes)))
+        if (filter.UpVotePercentage)
         {
-            LogExclusion(song, "Up vote percentage not in range");
-            return false;
+            var total = stats?.Upvotes + stats?.Downvotes;
+            var percentage = total > 0 ? stats!.Upvotes * 100f / total : null;
+            if (!filter.UpVotePercentage.InRange(percentage))
+            {
+                LogExclusion(song, "Up vote percentage not in range");
+                return false;
+            }
         }
 
         if (filter.DownVotes && !filter.DownVotes.InRange(stats?.Downvotes))
@@ -79,11 +83,15 @@ public class SongDetailFilter : ISongFilter
             return false;
         }
 
-        if (filter.DownVotePercentage && stats?.Upvotes + stats?.Downvotes > 0 &&
-            !filter.DownVotePercentage.InRange(stats?.Downvotes * 100f / (stats?.Upvotes + stats?.Downvotes)))
+        if (filter.DownVotePercentage)
         {
-            LogExclusion(song, "Down vote percentage not in range");
-            return false;
+            var total = stats?.Upvotes + stats?.Downvotes;
+            var percentage = total > 0 ? stats!.Downvotes * 100f / total : null;
+            if (!filter.DownVotePercentage.InRange(percentage))
+            {
+                LogExclusion(song, "Down vote percentage not in range");
+                return false;
+            }
         }
 
         if (filter.Rating && !filter.Rating.InRange(map.Stats?.Score * 100))
