@@ -225,7 +225,7 @@ public partial class SongDownloader(SongDownloadConfig config) : IDisposable
             }
         }
 
-        if (!Uri.TryCreate(url, UriKind.RelativeOrAbsolute, out var uri))
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
         {
             Log.Error("Invalid song download URL: {Url}", url);
             return null;
