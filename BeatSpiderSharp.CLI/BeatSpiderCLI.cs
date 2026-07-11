@@ -174,9 +174,9 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception e)
         {
-            Log.Error("Failed to load song input sources");
+            Log.Error(e, "Failed to load song input sources");
             return 1;
         }
 
