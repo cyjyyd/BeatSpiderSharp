@@ -122,15 +122,19 @@ public class SongSourceFactory : IDisposable
         var hashSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var playlistSong in playlists.SelectMany(playlist => playlist))
         {
-            if (!string.IsNullOrWhiteSpace(playlistSong.Key))
+            var hasKey = !string.IsNullOrWhiteSpace(playlistSong.Key);
+            var hasHash = !string.IsNullOrWhiteSpace(playlistSong.Hash);
+            if (hasKey)
             {
-                bsrSet.Add(playlistSong.Key);
+                bsrSet.Add(playlistSong.Key!);
             }
-            else if (!string.IsNullOrWhiteSpace(playlistSong.Hash))
+
+            if (hasHash)
             {
-                hashSet.Add(playlistSong.Hash);
+                hashSet.Add(playlistSong.Hash!);
             }
-            else
+
+            if (!hasKey && !hasHash)
             {
                 Log.Warning("Playlist song with neither key nor hash encountered");
             }
