@@ -7,7 +7,7 @@ public class Option
     [JsonProperty(Order = -99)]
     public bool Enable { get; set; }
 
-    public static implicit operator bool(Option option) => option.Enable;
+    public static implicit operator bool(Option? option) => option is { Enable: true };
 }
 
 public class Option<T>(T initialValue) : Option
