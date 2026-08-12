@@ -81,7 +81,8 @@ public class PlaylistExporter
         await using var fontStream = assembly.GetManifestResourceStream("BeatSpiderSharp.Core.Assets.font.ttf");
         if (coverStream == null || fontStream == null)
         {
-            throw new NullReferenceException("Could not find cover.png or font.ttf in resources");
+            if (coverStream != null) await coverStream.DisposeAsync();
+            throw new InvalidOperationException("Could not find cover.png or font.ttf in resources");
         }
 
         // Unlikely to happen, but just in case
