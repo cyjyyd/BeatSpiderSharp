@@ -57,7 +57,7 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
                 if (p == null)
                 {
                     Log.Error("Failed to load legacy preset");
-                    return -1;
+                    return 1;
                 }
 
                 preset = p;
@@ -66,12 +66,12 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
             {
                 Log.Error(e.InnerException, "Failed to convert legacy preset: {Message}", e.Message);
                 Log.Debug(e, "Legacy conversion exception details");
-                return -1;
+                return 1;
             }
             catch (Exception e)
             {
                 Log.Error(e, "Unexpected error while loading legacy preset: {Message}", e.Message);
-                return -1;
+                return 1;
             }
 
             cToken.ThrowIfCancellationRequested();
@@ -106,7 +106,7 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
             if (p == null)
             {
                 Log.Error("Failed to load preset");
-                return -1;
+                return 1;
             }
 
             preset = p;
