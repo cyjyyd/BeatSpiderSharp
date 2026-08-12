@@ -146,7 +146,6 @@ public class BeatSpiderCLI(bool verbose) : BeatSpider(verbose)
         await using var jsonReader = new JsonTextReader(new StreamReader(songDataStream));
         var serializer = JsonSerializer.Create(new JsonSerializerSettings
         {
-            Formatting = Formatting.Indented,
 #if DEBUG
             MissingMemberHandling = MissingMemberHandling.Error
 #endif
