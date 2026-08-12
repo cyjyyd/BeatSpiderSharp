@@ -23,6 +23,6 @@ public class RootFilter : ISongFilter
 
     public bool FilterSong(BeatSpiderSong song)
     {
-        return _filters.Count == 0 || _filters.All(filter => filter.FilterSong(song));
+        return _filters.All(filter => filter.FilterSong(song));
     }
 }
