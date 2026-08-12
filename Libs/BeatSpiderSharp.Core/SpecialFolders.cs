@@ -16,12 +16,6 @@ public class SpecialFolders: IDisposable
         TempFolder = Path.Combine(DataFolder, "Temp", Path.GetRandomFileName());
 
         Directory.CreateDirectory(DataFolder);
-        
-        if (Directory.Exists(TempFolder))
-        {
-            Directory.Delete(TempFolder, true);
-        }
-        
         Directory.CreateDirectory(TempFolder);
     }
     
