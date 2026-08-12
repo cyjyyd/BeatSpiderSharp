@@ -19,6 +19,10 @@ public static class Constants
             version = assembly.GetName().Version?.ToString(3) ?? "0.0.0";
         }
 
+#if DEBUG
         return SemanticVersion.Parse(version);
+#else
+        return SemanticVersion.TryParse(version, out var parsed) ? parsed : new SemanticVersion(0, 0, 0);
+#endif
     }
 }
