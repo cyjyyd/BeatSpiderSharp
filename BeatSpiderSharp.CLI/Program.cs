@@ -23,6 +23,11 @@ try
 {
     code = await parsedCommand.InvokeAsync(cancellationToken: cTokenSource.Token);
 }
+catch (OperationCanceledException)
+{
+    Console.WriteLine("Canceled");
+    code = 1;
+}
 catch (Exception e)
 {
     Console.WriteLine("Unhandled exception:");
